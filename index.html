@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaxPilot - Pakistan Tax Assistance AI</title>
+  
+  <!-- Typography (Standard clean Sans-Serif font) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-mode"> <!-- Default to dark mode for premium look, switchable to light mode -->
+
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logoGrad)" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FF7A00"/>
+                <stop offset="1" stop-color="#FF3D00"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="logo-text">TaxPilot</span>
+        </div>
+        <span class="logo-badge">v0 Spec</span>
+      </div>
+
+      <!-- Sidebar Primary Actions -->
+      <div class="sidebar-actions-top">
+        <!-- New Chat Button -->
+        <button id="new-chat-btn" class="btn btn-primary btn-new-chat">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Chat</span>
+        </button>
+
+        <!-- History Button (Repositioned under New Chat) -->
+        <button id="sidebar-history-btn" class="sidebar-action-btn sidebar-history-trigger">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>History</span>
+        </button>
+      </div>
+
+      <!-- Recent Chats Title -->
+      <div class="sidebar-section-title">Recent Chats</div>
+
+      <!-- Scrollable list of recent chats -->
+      <div id="sidebar-chats-container" class="sidebar-chats">
+        <!-- Rendered dynamically in app.js -->
+      </div>
+
+      <!-- Sidebar Footer (With wrapped icon slots for perfect vertical alignment) -->
+      <div class="sidebar-footer">
+        
+        <!-- Theme Toggle -->
+        <button id="theme-toggle-btn" class="sidebar-action-btn theme-toggle">
+          <div class="footer-icon-slot toggle-icon-container">
+            <!-- Sun Icon (Light Mode) -->
+            <svg class="icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <!-- Moon Icon (Dark Mode) -->
+            <svg class="icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+          <span id="theme-toggle-text">Light Mode</span>
+        </button>
+
+        <!-- Profile Tab (Avatar Swapped Back to the Left and aligned) -->
+        <button id="profile-btn" class="sidebar-action-btn profile-trigger">
+          <div class="footer-icon-slot user-avatar">
+            <span>RA</span>
+          </div>
+          <div class="user-details">
+            <span class="user-name" id="sidebar-user-name">Rana Adeel</span>
+            <span class="user-role" id="sidebar-user-role">Salaried • Active ATL</span>
+          </div>
+        </button>
+
+        <!-- Logout Button (Aligned with icon slot) -->
+        <button id="logout-btn" class="sidebar-action-btn logout-trigger">
+          <div class="footer-icon-slot">
+            <svg class="icon icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </div>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Navigation Header -->
+      <header class="top-nav">
+        <div class="nav-left">
+          <!-- Chat Console text removed, container kept empty for structural layouts -->
+          <span id="current-view-title" class="view-title"></span>
+        </div>
+        <div class="nav-right">
+          <!-- Metadata and status info display -->
+          <div class="top-nav-status">
+            <span class="badge badge-year" id="nav-year-val">TY 2026</span>
+            <span class="badge badge-atl" id="nav-atl-val">Active ATL</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Wrapper -->
+      <div class="view-viewport">
+        
+        <!-- 1. Chat Console Panel (Glow background moved here to center around the chat box) -->
+        <section id="chat-panel" class="view-panel active welcome-state-active">
+          
+          <!-- Glowing background centered relative to the chat box container -->
+          <div class="glowing-background">
+            <div class="glow-orb-center"></div>
+          </div>
+          
+          <!-- Large, clean greeting message for initial state (Suggestions and banners removed) -->
+          <div id="chat-welcome-state" class="welcome-container">
+            <h1 class="welcome-greeting">How can I help you today?</h1>
+          </div>
+
+          <!-- Active Message Feed (Loads when conversation has content) -->
+          <div id="chat-messages-feed" class="messages-feed hidden">
+            <!-- Messages rendered dynamically -->
+            
+            <!-- Streaming Progress / Thinking indicator (Relocated inside feed, where next message goes) -->
+            <div id="ai-thinking-indicator" class="thinking-bubble hidden">
+              <div class="spinner">
+                <div class="bounce1"></div>
+                <div class="bounce2"></div>
+                <div class="bounce3"></div>
+              </div>
+              <span id="thinking-step" class="thinking-text">Planner Node: Routing query and loading slabs...</span>
+            </div>
+          </div>
+
+          <!-- Chat Input Container (Will center or dock to bottom depending on state) -->
+          <div class="chat-input-wrapper" id="chat-input-wrapper">
+            <div class="chat-input-container">
+              <textarea id="chat-textarea" placeholder="Ask a tax question..." rows="1"></textarea>
+              <div class="input-actions">
+                <button id="send-msg-btn" class="send-btn" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="disclaimer-footer">
+              Disclaimer: TaxPilot is a v0 demo assistant. Information is based on Pakistan's Income Tax Ordinance 2001 (Salaried). Please verify calculations with the FBR or a professional.
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Chat Details Panel -->
+        <section id="details-panel" class="view-panel">
+          <div class="details-view-container">
+            <div class="details-header-card">
+              <button id="details-back-btn" class="btn btn-outline btn-back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back
+              </button>
+              <h2 id="details-topic" class="details-title">Details about Chat</h2>
+              <p class="details-subtitle" id="details-timestamp">Created on: July 2, 2026</p>
+            </div>
+
+            <div class="details-grid">
+              
+              <!-- Left Column: Summary & Metadata -->
+              <div class="details-col-left">
+                <div class="details-card card-glass">
+                  <h3>Chat Summary</h3>
+                  <p id="details-summary-text" class="summary-paragraph">
+                    No summary available.
+                  </p>
+                </div>
+
+                <div class="details-card card-glass">
+                  <h3>Taxpayer Metadata</h3>
+                  <div class="metadata-grid">
+                    <div class="meta-item">
+                      <span class="meta-label">Tax Year</span>
+                      <span class="meta-value badge" id="details-meta-year">2026</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">ATL Status</span>
+                      <span class="meta-value badge" id="details-meta-atl">Active</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">Taxpayer Category</span>
+                      <span class="meta-value" id="details-meta-category">Salaried Individual (Income Tax Ordinance)</span>
+                    </div>
+                    <div class="meta-item">
+                      <span class="meta-label">Database Origin</span>
+                      <span class="meta-value">Qdrant Vector DB & PostgreSQL</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Tax Audit & Citations -->
+              <div class="details-col-right">
+                <!-- Tax Audit Log Card -->
+                <div id="details-calc-card" class="details-card card-glass">
+                  <h3>Deterministic Tax Calculation Log</h3>
+                  <div id="details-calc-content">
+                    <!-- Loaded dynamically -->
+                  </div>
+                </div>
+
+                <!-- Citations Card -->
+                <div class="details-card card-glass">
+                  <h3>Legal References Cited</h3>
+                  <ul id="details-citations-list" class="citations-details-list">
+                    <!-- Loaded dynamically -->
+                  </ul>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Action panel -->
+            <div class="details-actions">
+              <button id="resume-chat-btn" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Resume Full Chat Conversation
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. History Cards Panel -->
+        <section id="history-panel" class="view-panel">
+          <div class="history-view-container">
+            <div class="history-welcome">
+              <h2>History</h2>
+              <p>Review summary cards of all tax assistance queries, calculations, and legal advice retrieved.</p>
+            </div>
+
+            <div id="history-cards-grid" class="history-grid">
+              <!-- Rendered dynamically in app.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Profile Page Panel -->
+        <section id="profile-panel" class="view-panel">
+          <div class="profile-view-container">
+            <div class="profile-header-card">
+              <h2 class="profile-view-title">Taxpayer Profile Settings</h2>
+              <p class="profile-view-subtitle">Manage your personal variables, Active Taxpayer status, and default tax parameters below.</p>
+            </div>
+
+            <div class="profile-card-form card-glass">
+              <form id="profile-edit-form">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="profile-input-name">Full Name</label>
+                    <input type="text" id="profile-input-name" class="profile-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-input-email">Email Address</label>
+                    <input type="email" id="profile-input-email" class="profile-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-input-ntn">NTN / Registration Number</label>
+                    <input type="text" id="profile-input-ntn" class="profile-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-input-atl">Active Taxpayers List (ATL) Status</label>
+                    <select id="profile-input-atl" class="profile-select">
+                      <option value="Active">Active Filer (Standard Slabs)</option>
+                      <option value="Inactive">Inactive Filer / Non-Filer (+100% Surcharge)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-input-year">Tax Year Context</label>
+                    <select id="profile-input-year" class="profile-select">
+                      <option value="2026">Tax Year 2026 (Current)</option>
+                      <option value="2025">Tax Year 2025</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-input-jurisdiction">Tax Jurisdiction</label>
+                    <input type="text" id="profile-input-jurisdiction" class="profile-input" disabled value="RTO Lahore, Zone-I">
+                  </div>
+                </div>
+                
+                <div class="form-actions">
+                  <button type="button" id="profile-cancel-btn" class="btn btn-outline">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Save Profile Info</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Logout Confirmation Modal -->
+  <div id="logout-modal" class="modal-overlay hidden">
+    <div class="modal-content modal-content-small card-glass">
+      <div class="modal-header">
+        <h2>Confirm Logout</h2>
+        <button id="close-logout-btn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to log out of the TaxPilot platform? This will end your current session.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-logout-btn" class="btn btn-outline">Cancel</button>
+        <button id="confirm-logout-btn" class="btn btn-danger">Yes, Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application JS Code -->
+  <script src="app.js"></script>
+</body>
+</html>
