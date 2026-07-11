@@ -20,8 +20,7 @@ class QdrantService:
             self.encoder = SentenceTransformer("all-MiniLM-L6-v2")
             logger.info("Embedding encoder initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize sentence transformer: {e}")
-            raise RuntimeError(f"Embedding encoder initialization failed: {e}") from e
+            logger.warning(f"Failed to initialize sentence transformer during startup: {e}. Qdrant search will be disabled.")
 
         try:
             if settings.QDRANT_HOST:
@@ -39,10 +38,9 @@ class QdrantService:
                 self.enabled = True
                 logger.info("Successfully connected to Qdrant client.")
             else:
-                raise ValueError("QDRANT_HOST setting is not configured.")
+                logger.warning("QDRANT_HOST is not configured. Qdrant service is disabled.")
         except Exception as e:
-            logger.error(f"Failed to connect to Qdrant: {e}")
-            raise ConnectionError(f"Qdrant connection failed: {e}") from e
+            logger.warning(f"Failed to connect to Qdrant during initialization: {e}. Qdrant service is disabled.")
 
     def search_documents(self, query: str, limit: int = 4) -> List[Dict[str, Any]]:
         """
@@ -56,7 +54,8 @@ class QdrantService:
             A list of dictionary mappings representing retrieved document metadata and content.
         """
         if not self.enabled or not self.client or not self.encoder:
-            raise ConnectionError("Qdrant service is disabled or client is not connected.")
+            logger.warning("Search query requested but Qdrant service is disabled or disconnected.")
+            return []
 
         try:
             collections = self.client.get_collections()
@@ -87,3 +86,6 @@ class QdrantService:
         except Exception as e:
             logger.error(f"Error during Qdrant search: {e}")
             raise RuntimeError(f"Qdrant search query failed: {e}") from e
+
+# Instantiate the service singleton to be imported by application nodes
+qdrant_service = QdrantService()
