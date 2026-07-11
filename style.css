@@ -1276,7 +1276,6 @@ body.light-mode .cit-badge {
   padding: 24px;
   box-sizing: border-box;
   max-width: 100%;
-  overflow: hidden;
 }
 
 .form-grid {
@@ -1320,6 +1319,16 @@ body.light-mode .cit-badge {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+.profile-select {
+  padding-right: 36px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
 }
 
 .profile-input:focus,
@@ -1626,16 +1635,17 @@ body.sidebar-open {
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  /* Bottom safe-area padding for details, history, and profile scroll containers */
+  /* Bottom safe-area padding for details, history, and profile scroll containers to make buttons fully accessible */
   .details-view-container,
   .history-view-container,
   .profile-view-container {
-    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  /* Profile form card must not overflow on mobile */
+  /* Profile form card on mobile */
   .profile-card-form {
     padding: 16px !important;
+    overflow: visible !important;
   }
 
   .form-grid {
@@ -1647,12 +1657,20 @@ body.sidebar-open {
     max-width: 100% !important;
   }
 
-  /* Profile page must not overflow horizontally */
+  /* Profile page: allow vertical scroll, prevent horizontal overflow */
   .profile-view-container {
     box-sizing: border-box !important;
     overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
+    height: 100% !important;
+    display: block !important;
+  }
+
+  .profile-header-card {
+    margin-bottom: 20px !important;
   }
 
   /* Income stream inline grids must go single-column */
