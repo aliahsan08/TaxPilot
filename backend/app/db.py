@@ -52,7 +52,6 @@ class User(Base):
     user_id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     email = Column(String(255), unique=True, nullable=False)
     full_name = Column(String(255))
-    password_hash = Column(String(255), nullable=True)
     jurisdiction = Column(String(100), nullable=True, default="RTO Lahore")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -152,7 +151,6 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
     _migrations = [
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS jurisdiction VARCHAR(100) DEFAULT 'RTO Lahore';",
         "ALTER TABLE tax_profiles ADD COLUMN IF NOT EXISTS jurisdiction VARCHAR(100) DEFAULT 'RTO Lahore';",
         "ALTER TABLE tax_profiles ADD COLUMN IF NOT EXISTS wealth_statement_filed BOOLEAN DEFAULT FALSE;",
