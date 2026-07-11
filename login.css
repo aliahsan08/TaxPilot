@@ -508,6 +508,8 @@ textarea {
     padding: 36px 28px 24px;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    align-items: center;
+    text-align: center;
   }
 
   .brand-tagline h1 {
@@ -519,7 +521,8 @@ textarea {
   }
 
   .brand-logo {
-    margin-bottom: 20px;
+    justify-content: center;
+    margin-bottom: 12px;
   }
 
   .brand-tagline p {

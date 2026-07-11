@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TaxPilot — Sign In</title>
+  <title>TaxPilot - Tax Intelligence Platform</title>
   <meta name="description"
     content="Sign in or create your TaxPilot account to access Pakistan's AI-powered FBR tax assistant.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -141,7 +141,7 @@
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                <input type="text" id="reg-name" class="auth-input" placeholder="e.g. Rana Adeel" required>
+                <input type="text" id="reg-name" class="auth-input" placeholder="Ali Ahsan" required>
               </div>
             </div>
 
@@ -505,7 +505,7 @@
         sessionStorage.setItem("taxpilot_special_status", "None");
       }
 
-      window.location.href = "index.html";
+      window.location.href = "home.html";
     }
 
     // Login form handler
@@ -711,7 +711,7 @@
 
     // If already logged in, skip auth page
     if (sessionStorage.getItem("taxpilot_token")) {
-      window.location.href = "index.html";
+      window.location.href = "home.html";
     }
   </script>
 </body>

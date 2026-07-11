@@ -390,9 +390,18 @@ def delete_chat_thread(chat_id: str, current_user: Dict[str, Any] = Depends(get_
 
 # Mount frontend static files to serve the UI dynamically from same port
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import os
 
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if os.path.exists(os.path.join(static_dir, "index.html")):
+
+@app.get("/")
+def read_root():
+    home_path = os.path.join(static_dir, "home.html")
+    if os.path.exists(home_path):
+        return FileResponse(home_path)
+    return {"message": "TaxPilot Web App Static Site"}
+
+if os.path.exists(static_dir):
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 

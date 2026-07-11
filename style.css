@@ -1522,15 +1522,92 @@ body.light-mode .cit-badge {
   }
 }
 
+.mobile-menu-trigger {
+  display: none;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+body.sidebar-open {
+  overflow: hidden !important;
+  height: 100vh !important;
+  position: fixed !important;
+  width: 100vw !important;
+}
+
 @media (max-width: 768px) {
   .sidebar {
-    position: absolute;
-    left: -240px;
-    height: 100%;
+    position: fixed !important;
+    top: 0;
+    left: -250px !important;
+    width: 240px !important;
+    height: 100vh !important;
+    z-index: 999 !important;
+    transition: left 0.3s ease !important;
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5) !important;
+    background-color: #0b0b0f !important; /* Ensure high visibility/contrast */
   }
 
   .sidebar.active {
-    left: 0;
+    left: 0 !important;
+  }
+
+  .top-nav-status {
+    position: absolute !important;
+    top: 12px !important;
+    left: 16px !important;
+    right: 16px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    z-index: 100 !important;
+    pointer-events: auto !important;
+  }
+
+  .mobile-menu-trigger {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    color: var(--text-primary) !important;
+    width: 36px !important;
+    height: 36px !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: background 0.2s ease !important;
+  }
+
+  .mobile-menu-trigger:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .mobile-menu-trigger svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  .nav-badges-group {
+    display: flex !important;
+    gap: 8px !important;
   }
 }
 

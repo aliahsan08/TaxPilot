@@ -74,6 +74,9 @@ const sidebarUserName     = document.getElementById("sidebar-user-name");
 const sidebarUserRole     = document.getElementById("sidebar-user-role");
 const navYearVal          = document.getElementById("nav-year-val");
 const navAtlVal           = document.getElementById("nav-atl-val");
+const mobileMenuBtn       = document.getElementById("mobile-menu-btn");
+const sidebarEl           = document.querySelector(".sidebar");
+const sidebarOverlay      = document.getElementById("sidebar-overlay");
 
 const chatPanel           = document.getElementById("chat-panel");
 const chatWelcomeState    = document.getElementById("chat-welcome-state");
@@ -119,6 +122,12 @@ const logoutModal         = document.getElementById("logout-modal");
 const closeLogoutBtn      = document.getElementById("close-logout-btn");
 const cancelLogoutBtn     = document.getElementById("cancel-logout-btn");
 const confirmLogoutBtn    = document.getElementById("confirm-logout-btn");
+
+const deleteChatModal       = document.getElementById("delete-chat-modal");
+const closeDeleteChatBtn    = document.getElementById("close-delete-chat-btn");
+const cancelDeleteChatBtn   = document.getElementById("cancel-delete-chat-btn");
+const confirmDeleteChatBtn  = document.getElementById("confirm-delete-chat-btn");
+let chatIdToDelete = null;
 
 /**
  * Initializes the application state, theme, configurations, and triggers background data fetches.
@@ -177,11 +186,28 @@ async function loadChatsFromBackend() {
 }
 
 /**
+ * Toggles mobile menu drawer display state and blocks background scroll overlays.
+ */
+function toggleMobileSidebar(forceClose = false) {
+  if (!sidebarEl || !sidebarOverlay) return;
+  if (forceClose || sidebarEl.classList.contains("active")) {
+    sidebarEl.classList.remove("active");
+    sidebarOverlay.classList.remove("active");
+    document.body.classList.remove("sidebar-open");
+  } else {
+    sidebarEl.classList.add("active");
+    sidebarOverlay.classList.add("active");
+    document.body.classList.add("sidebar-open");
+  }
+}
+
+/**
  * Navigates system layouts and visual states between views.
  * 
  * @param {string} view The target view identifier ('chat', 'history', 'details', 'profile').
  */
 function switchView(view) {
+  toggleMobileSidebar(true);
   currentView = view;
   chatPanel.classList.remove("active");
   detailsPanel.classList.remove("active");
@@ -602,7 +628,8 @@ function renderSidebar() {
     });
     item.querySelector(".sidebar-chat-delete-btn").addEventListener("click", e => {
       e.stopPropagation();
-      deleteChat(chat.id);
+      chatIdToDelete = chat.id;
+      deleteChatModal.classList.remove("hidden");
     });
     sidebarContainer.appendChild(item);
   });
@@ -658,7 +685,8 @@ function renderHistoryGrid() {
     });
     card.querySelector(".hist-card-delete-btn").addEventListener("click", (e) => {
       e.stopPropagation();
-      deleteChat(chat.id);
+      chatIdToDelete = chat.id;
+      deleteChatModal.classList.remove("hidden");
     });
     historyCardsGrid.appendChild(card);
   });
@@ -1072,6 +1100,13 @@ function adjustTextareaHeight() {
 function setupEventListeners() {
   themeBtn.addEventListener("click", toggleTheme);
   newChatBtn.addEventListener("click", handleNewChat);
+  
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener("click", () => toggleMobileSidebar());
+  }
+  if (sidebarOverlay) {
+    sidebarOverlay.addEventListener("click", () => toggleMobileSidebar(true));
+  }
   sidebarHistoryBtn.addEventListener("click", () => switchView("history"));
   profileBtn.addEventListener("click", () => switchView("profile"));
   profileEditForm.addEventListener("submit", saveProfile);
@@ -1092,6 +1127,20 @@ function setupEventListeners() {
   closeLogoutBtn.addEventListener("click",  () => logoutModal.classList.add("hidden"));
   cancelLogoutBtn.addEventListener("click", () => logoutModal.classList.add("hidden"));
 
+  const hideDeleteChatModal = () => {
+    deleteChatModal.classList.add("hidden");
+    chatIdToDelete = null;
+  };
+  closeDeleteChatBtn.addEventListener("click",  hideDeleteChatModal);
+  cancelDeleteChatBtn.addEventListener("click", hideDeleteChatModal);
+  confirmDeleteChatBtn.addEventListener("click", async () => {
+    if (chatIdToDelete) {
+      const targetId = chatIdToDelete;
+      hideDeleteChatModal();
+      await deleteChat(targetId);
+    }
+  });
+
   confirmLogoutBtn.addEventListener("click", () => {
     logoutModal.classList.add("hidden");
     sessionStorage.clear();
@@ -1101,6 +1150,7 @@ function setupEventListeners() {
 
   window.addEventListener("click", e => {
     if (e.target === logoutModal) logoutModal.classList.add("hidden");
+    if (e.target === deleteChatModal) hideDeleteChatModal();
     const customAlertModal = document.getElementById("custom-alert-modal");
     if (e.target === customAlertModal) customAlertModal.classList.add("hidden");
   });
