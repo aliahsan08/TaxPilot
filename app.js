@@ -77,6 +77,7 @@ const navAtlVal           = document.getElementById("nav-atl-val");
 const mobileMenuBtn       = document.getElementById("mobile-menu-btn");
 const sidebarEl           = document.querySelector(".sidebar");
 const sidebarOverlay      = document.getElementById("sidebar-overlay");
+const closeSidebarBtn     = document.getElementById("close-sidebar-btn");
 
 const chatPanel           = document.getElementById("chat-panel");
 const chatWelcomeState    = document.getElementById("chat-welcome-state");
@@ -1106,6 +1107,9 @@ function setupEventListeners() {
   }
   if (sidebarOverlay) {
     sidebarOverlay.addEventListener("click", () => toggleMobileSidebar(true));
+  }
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener("click", () => toggleMobileSidebar(true));
   }
   sidebarHistoryBtn.addEventListener("click", () => switchView("history"));
   profileBtn.addEventListener("click", () => switchView("profile"));
