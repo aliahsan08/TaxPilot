@@ -66,14 +66,24 @@ class QdrantService:
 
             query_vector = self.encoder.encode(query).tolist()
             
-            results = self.client.search(
-                collection_name=settings.QDRANT_COLLECTION,
-                query_vector=query_vector,
-                limit=limit
-            )
+            if hasattr(self.client, "query_points"):
+                results = self.client.query_points(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    query=query_vector,
+                    limit=limit
+                )
+                points = results.points
+            elif hasattr(self.client, "search"):
+                points = self.client.search(
+                    collection_name=settings.QDRANT_COLLECTION,
+                    query_vector=query_vector,
+                    limit=limit
+                )
+            else:
+                raise AttributeError("QdrantClient has neither 'query_points' nor 'search' method.")
             
             hits = []
-            for hit in results:
+            for hit in points:
                 payload = hit.payload or {}
                 hits.append({
                     "content": payload.get("content", ""),

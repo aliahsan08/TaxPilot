@@ -46,7 +46,6 @@
 
       <div class="brand-tagline">
         <h1>Tax Intelligence Platform</h1>
-        <p>Powered by LangGraph, RAG retrieval over FBR law, and deterministic slab calculators for Tax Year 2026.</p>
       </div>
 
       <ul class="brand-features">
@@ -108,8 +107,8 @@
             <span class="btn-spinner hidden"></span>
           </button>
 
-          <p class="auth-switch-text">Don't have an account? <a href="#" onclick="switchTab('register')">Create one
-              free</a></p>
+          <p class="auth-switch-text">Don't have an account? <a href="#" onclick="switchTab('register')">Sign up
+            </a></p>
         </form>
 
         <!-- ====== REGISTER FORM ====== -->
@@ -259,11 +258,14 @@
 
             <!-- Salary Checkbox & Inputs -->
             <div class="income-checkbox-group" style="margin-bottom: 12px;">
-              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
-                <input type="checkbox" id="chk-inc-salary" onchange="toggleIncomeWrapper('salary')" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
+              <label class="checkbox-label"
+                style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                <input type="checkbox" id="chk-inc-salary" onchange="toggleIncomeWrapper('salary')"
+                  style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
                 <span>Salaried Income</span>
               </label>
-              <div id="wrapper-inc-salary" class="income-input-wrapper hidden" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+              <div id="wrapper-inc-salary" class="income-input-wrapper hidden"
+                style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
                 <div class="form-row-2">
                   <div class="form-group">
                     <label for="reg-inc-salary">Gross Annual Salary</label>
@@ -279,11 +281,14 @@
 
             <!-- Business Checkbox & Inputs -->
             <div class="income-checkbox-group" style="margin-bottom: 12px;">
-              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
-                <input type="checkbox" id="chk-inc-business" onchange="toggleIncomeWrapper('business')" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
+              <label class="checkbox-label"
+                style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                <input type="checkbox" id="chk-inc-business" onchange="toggleIncomeWrapper('business')"
+                  style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
                 <span>Business Income</span>
               </label>
-              <div id="wrapper-inc-business" class="income-input-wrapper hidden" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+              <div id="wrapper-inc-business" class="income-input-wrapper hidden"
+                style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
                 <div class="form-group">
                   <label for="reg-inc-business">Gross Business Annual Income</label>
                   <input type="number" id="reg-inc-business" class="auth-input" placeholder="0" min="0">
@@ -293,11 +298,14 @@
 
             <!-- Property Checkbox & Inputs -->
             <div class="income-checkbox-group" style="margin-bottom: 12px;">
-              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
-                <input type="checkbox" id="chk-inc-property" onchange="toggleIncomeWrapper('property')" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
+              <label class="checkbox-label"
+                style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                <input type="checkbox" id="chk-inc-property" onchange="toggleIncomeWrapper('property')"
+                  style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
                 <span>Property Rental Income</span>
               </label>
-              <div id="wrapper-inc-property" class="income-input-wrapper hidden" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+              <div id="wrapper-inc-property" class="income-input-wrapper hidden"
+                style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
                 <div class="form-group">
                   <label for="reg-inc-property">Gross Property Annual Income</label>
                   <input type="number" id="reg-inc-property" class="auth-input" placeholder="0" min="0">
@@ -377,7 +385,7 @@
     function toggleIncomeWrapper(head) {
       const chk = document.getElementById(`chk-inc-${head}`);
       const wrapper = document.getElementById(`wrapper-inc-${head}`);
-      
+
       if (chk.checked) {
         wrapper.style.display = "block";
         wrapper.classList.remove("hidden");
@@ -688,7 +696,7 @@
         }
 
         showMessage("Account created and configured! Redirecting…", "success");
-        
+
         // Wait a tiny bit then redirect
         const tokenVal = session ? session.access_token : "";
         setTimeout(() => saveSessionAndRedirect(user.id, user.email, full_name, jurisdiction, tokenVal, dbProfile), 700);

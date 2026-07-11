@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,44 +13,49 @@
       window.location.replace("login.html");
     }
   </script>
-  
+
   <!-- Typography (Standard clean Sans-Serif font) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
+
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="dark-mode"> <!-- Default to dark mode for premium look, switchable to light mode -->
 
   <div class="app-container">
-    
+
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo-container">
           <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logoGrad)" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logoGrad)" stroke="var(--accent-glow-color)"
+              stroke-width="2" stroke-linejoin="round" />
+            <path d="M2 17L12 22L22 17" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <path d="M2 12L12 17L22 12" stroke="var(--accent-glow-color)" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
             <defs>
               <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#FF7A00"/>
-                <stop offset="1" stop-color="#FF3D00"/>
+                <stop stop-color="#FF7A00" />
+                <stop offset="1" stop-color="#FF3D00" />
               </linearGradient>
             </defs>
           </svg>
           <span class="logo-text">TaxPilot</span>
         </div>
-        <span class="logo-badge">v0 Spec</span>
+        <span class="logo-badge">demo</span>
       </div>
 
       <!-- Sidebar Primary Actions -->
       <div class="sidebar-actions-top">
         <!-- New Chat Button -->
         <button id="new-chat-btn" class="btn btn-primary btn-new-chat">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
@@ -76,12 +82,13 @@
 
       <!-- Sidebar Footer (With wrapped icon slots for perfect vertical alignment) -->
       <div class="sidebar-footer">
-        
+
         <!-- Theme Toggle -->
         <button id="theme-toggle-btn" class="sidebar-action-btn theme-toggle">
           <div class="footer-icon-slot toggle-icon-container">
             <!-- Sun Icon (Light Mode) -->
-            <svg class="icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="5"></circle>
               <line x1="12" y1="1" x2="12" y2="3"></line>
               <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -93,7 +100,8 @@
               <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
             </svg>
             <!-- Moon Icon (Dark Mode) -->
-            <svg class="icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </div>
@@ -114,7 +122,8 @@
         <!-- Logout Button (Aligned with icon slot) -->
         <button id="logout-btn" class="sidebar-action-btn logout-trigger">
           <div class="footer-icon-slot">
-            <svg class="icon icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="icon icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>
               <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -127,7 +136,7 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
-      
+
       <!-- Floating Top Status Panel -->
       <div class="top-nav-status">
         <span class="badge badge-year" id="nav-year-val">TY 2026</span>
@@ -136,16 +145,16 @@
 
       <!-- View Wrapper -->
       <div class="view-viewport">
-        
+
         <!-- 1. Chat Console Panel (Hourglass background glow) -->
         <section id="chat-panel" class="view-panel active welcome-state-active">
-          
+
           <!-- Glowing background hourglass layout (top orange, bottom blue) -->
           <div class="glowing-background">
             <div class="glow-orb-top"></div>
             <div class="glow-orb-bottom"></div>
           </div>
-          
+
           <!-- Large, clean greeting message for initial state (Suggestions and banners removed) -->
           <div id="chat-welcome-state" class="welcome-container">
             <h1 class="welcome-greeting">How can I help you today?</h1>
@@ -154,7 +163,7 @@
           <!-- Active Message Feed (Loads when conversation has content) -->
           <div id="chat-messages-feed" class="messages-feed hidden">
             <!-- Messages rendered dynamically -->
-            
+
             <!-- Streaming Progress / Thinking indicator (Relocated inside feed, where next message goes) -->
             <div id="ai-thinking-indicator" class="thinking-bubble hidden">
               <div class="spinner">
@@ -180,7 +189,8 @@
               </div>
             </div>
             <div class="disclaimer-footer">
-              Disclaimer: TaxPilot is a v0 demo assistant. Information is based on Pakistan's Income Tax Ordinance 2001 (Salaried). Please verify calculations with the FBR or a professional.
+              Disclaimer: TaxPilot is a v0 demo assistant. Information is based on Pakistan's Income Tax Ordinance 2001
+              (Salaried). Please verify calculations with the FBR or a professional.
             </div>
           </div>
         </section>
@@ -201,7 +211,7 @@
             </div>
 
             <div class="details-grid">
-              
+
               <!-- Left Column: Summary & Metadata -->
               <div class="details-col-left">
                 <div class="details-card card-glass">
@@ -224,7 +234,8 @@
                     </div>
                     <div class="meta-item">
                       <span class="meta-label">Taxpayer Category</span>
-                      <span class="meta-value" id="details-meta-category">Salaried Individual (Income Tax Ordinance)</span>
+                      <span class="meta-value" id="details-meta-category">Salaried Individual (Income Tax
+                        Ordinance)</span>
                     </div>
                   </div>
                 </div>
@@ -283,7 +294,8 @@
           <div class="profile-view-container">
             <div class="profile-header-card">
               <h2 class="profile-view-title">Taxpayer Profile Settings</h2>
-              <p class="profile-view-subtitle">Manage your personal variables, Active Taxpayer status, and default tax parameters below.</p>
+              <p class="profile-view-subtitle">Manage your personal variables, Active Taxpayer status, and default tax
+                parameters below.</p>
             </div>
 
             <div class="profile-card-form card-glass">
@@ -343,19 +355,25 @@
                 </div>
 
                 <!-- Income Declarations Section -->
-                <div class="form-section-header" style="margin-top: 24px; margin-bottom: 12px; font-weight: 600; font-size: 14px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+                <div class="form-section-header"
+                  style="margin-top: 24px; margin-bottom: 12px; font-weight: 600; font-size: 14px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px;">
                   Annual Income Declarations (PKR)
                 </div>
-                
-                <div class="income-checkboxes-container" style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
+
+                <div class="income-checkboxes-container"
+                  style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
                   <!-- Salary stream -->
                   <div class="income-checkbox-group">
-                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
-                      <input type="checkbox" id="profile-chk-salary" onchange="toggleProfileIncomeWrapper('salary')" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                    <label class="checkbox-label"
+                      style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="profile-chk-salary" onchange="toggleProfileIncomeWrapper('salary')"
+                        style="accent-color: var(--accent); width: 16px; height: 16px;">
                       <span>Salaried Income</span>
                     </label>
-                    <div id="profile-wrapper-salary" class="income-input-wrapper" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
-                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <div id="profile-wrapper-salary" class="income-input-wrapper"
+                      style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                      <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
                         <div class="form-group">
                           <label for="profile-input-inc-salary">Gross Annual Salary</label>
                           <input type="number" id="profile-input-inc-salary" class="profile-input" min="0">
@@ -370,11 +388,14 @@
 
                   <!-- Business stream -->
                   <div class="income-checkbox-group">
-                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
-                      <input type="checkbox" id="profile-chk-business" onchange="toggleProfileIncomeWrapper('business')" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                    <label class="checkbox-label"
+                      style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="profile-chk-business" onchange="toggleProfileIncomeWrapper('business')"
+                        style="accent-color: var(--accent); width: 16px; height: 16px;">
                       <span>Business Income</span>
                     </label>
-                    <div id="profile-wrapper-business" class="income-input-wrapper" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                    <div id="profile-wrapper-business" class="income-input-wrapper"
+                      style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
                       <div class="form-group">
                         <label for="profile-input-inc-business">Gross Business Annual Income</label>
                         <input type="number" id="profile-input-inc-business" class="profile-input" min="0">
@@ -384,11 +405,14 @@
 
                   <!-- Property stream -->
                   <div class="income-checkbox-group">
-                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
-                      <input type="checkbox" id="profile-chk-property" onchange="toggleProfileIncomeWrapper('property')" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                    <label class="checkbox-label"
+                      style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="profile-chk-property" onchange="toggleProfileIncomeWrapper('property')"
+                        style="accent-color: var(--accent); width: 16px; height: 16px;">
                       <span>Property Rental Income</span>
                     </label>
-                    <div id="profile-wrapper-property" class="income-input-wrapper" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                    <div id="profile-wrapper-property" class="income-input-wrapper"
+                      style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
                       <div class="form-group">
                         <label for="profile-input-inc-property">Gross Property Annual Income</label>
                         <input type="number" id="profile-input-inc-property" class="profile-input" min="0">
@@ -400,7 +424,7 @@
 
 
                 </div>
-                
+
                 <div class="form-actions">
                   <button type="button" id="profile-cancel-btn" class="btn btn-outline">Cancel</button>
                   <button type="submit" class="btn btn-primary">Save Profile Info</button>
@@ -440,11 +464,14 @@
         <button id="close-custom-alert-btn" class="modal-close-btn" onclick="closeCustomAlert()">&times;</button>
       </div>
       <div class="modal-body">
-        <div id="custom-alert-message" style="line-height: 1.6; font-size: 14.5px; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 20px;"></div>
+        <div id="custom-alert-message"
+          style="line-height: 1.6; font-size: 14.5px; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 20px;">
+        </div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px;">
         <button id="custom-alert-pdf-btn" class="btn btn-outline" style="display: none; align-items: center; gap: 8px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small" style="width: 16px; height: 16px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small"
+            style="width: 16px; height: 16px;">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
             <polyline points="15 3 21 3 21 9"></polyline>
             <line x1="10" y1="14" x2="21" y2="3"></line>
@@ -459,4 +486,5 @@
   <!-- Application JS Code -->
   <script src="app.js"></script>
 </body>
+
 </html>
