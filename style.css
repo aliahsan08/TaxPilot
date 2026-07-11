@@ -1,6 +1,4 @@
-/* ==========================================================================
-   TAX PILOT DESIGN SYSTEM & STYLE SHEET (GRAYSCALE THEME, ORANGE BACK GLOW)
-   ========================================================================== */
+/*TAX PILOT DESIGN SYSTEM & STYLE SHEET (GRAYSCALE THEME, ORANGE BACK GLOW)*/
 
 /* 1. Global Reset & Theme Variables */
 :root {
@@ -45,10 +43,12 @@ body.dark-mode {
   --btn-secondary-hover: #2D2D2D;
   --btn-border: rgba(255, 255, 255, 0.12);
 
-  /* Background Glow Only (Remains Orange) */
+  /* Hourglass Ambient Glow Variables */
   --accent-glow-color: #FF7A00;
-  --glow-color-1: rgba(255, 110, 0, 0.42);
-  --glow-color-2: rgba(255, 45, 0, 0.32);
+  --glow-orange-1: rgba(255, 90, 0, 0.60);
+  --glow-orange-2: rgba(255, 50, 0, 0.30);
+  --glow-blue-1: rgba(0, 102, 255, 0.55);
+  --glow-blue-2: rgba(0, 50, 200, 0.25);
 
   --card-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.5);
   --modal-overlay-bg: rgba(0, 0, 0, 0.85);
@@ -76,10 +76,12 @@ body.light-mode {
   --btn-secondary-hover: #DFDFDF;
   --btn-border: rgba(0, 0, 0, 0.1);
 
-  /* Background Glow Only (Remains Soft Orange) */
+  /* Hourglass Ambient Glow Variables */
   --accent-glow-color: #FF7A00;
-  --glow-color-1: rgba(255, 145, 70, 0.82);
-  --glow-color-2: rgba(255, 195, 130, 0.72);
+  --glow-orange-1: rgba(255, 110, 0, 0.71);
+  --glow-orange-2: rgba(255, 160, 50, 0.36);
+  --glow-blue-1: rgba(0, 120, 255, 0.70);
+  --glow-blue-2: rgba(50, 160, 255, 0.30);
 
   --card-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.04);
   --modal-overlay-bg: rgba(0, 0, 0, 0.3);
@@ -140,46 +142,71 @@ textarea {
   justify-content: center;
 }
 
-.glow-orb-center {
+.glow-orb-top {
   position: absolute;
-  top: 50%;
+  top: -15%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 500px;
-  height: 500px;
+  transform: translateX(-50%);
+  width: 650px;
+  height: 380px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--glow-color-1) 0%, var(--glow-color-2) 35%, transparent 70%);
-  filter: blur(130px); /* high blur for ultra soft fading edges */
-  opacity: 0.95;
-  animation: glowPulse 7s infinite ease-in-out;
+  background: radial-gradient(ellipse at center, var(--glow-orange-1) 0%, var(--glow-orange-2) 55%, transparent 80%);
+  filter: blur(120px);
+  animation: glowPulseTop 9s infinite ease-in-out alternate;
   pointer-events: none;
-  transition: opacity 1.4s ease-out;
-}
-
-@keyframes glowPulse {
-
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(0.9);
-    opacity: 0.75;
-    filter: blur(115px);
-  }
-
-  50% {
-    transform: translate(-50%, -50%) scale(1.2);
-    opacity: 1.0;
-    filter: blur(140px);
-  }
-}
-
-body.light-mode .glow-orb-center {
+  z-index: 0;
+  transition: opacity 1.2s ease;
   opacity: 0.95;
-  filter: blur(100px);
 }
 
-/* Fade out center glow orb in active chat state */
-#chat-panel:not(.welcome-state-active) .glow-orb-center {
-  opacity: 0;
+.glow-orb-bottom {
+  position: absolute;
+  bottom: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 650px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--glow-blue-1) 0%, var(--glow-blue-2) 55%, transparent 80%);
+  filter: blur(120px);
+  animation: glowPulseBottom 9s infinite ease-in-out alternate;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 1.2s ease;
+  opacity: 1.0;
+}
+
+@keyframes glowPulseTop {
+  0% {
+    transform: translateX(-50%) scale(0.9) translateY(0);
+    filter: blur(100px);
+  }
+
+  100% {
+    transform: translateX(-50%) scale(1.15) translateY(20px);
+    filter: blur(130px);
+  }
+}
+
+@keyframes glowPulseBottom {
+  0% {
+    transform: translateX(-50%) scale(1.15) translateY(0);
+    filter: blur(130px);
+  }
+
+  100% {
+    transform: translateX(-50%) scale(0.9) translateY(-20px);
+    filter: blur(100px);
+  }
+}
+
+/* Maintain a soft, readable backdrop glow in active chat mode */
+#chat-panel:not(.welcome-state-active) .glow-orb-top {
+  opacity: 0.55;
+}
+
+#chat-panel:not(.welcome-state-active) .glow-orb-bottom {
+  opacity: 0.6;
 }
 
 /* 3. Core App Grid Layout */
@@ -518,29 +545,17 @@ body.light-mode .moon-icon {
   height: 100%;
   overflow: hidden;
   z-index: 2;
-}
-
-.top-nav {
-  height: 56px;
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  backdrop-filter: blur(20px);
-  background-color: rgba(var(--bg-primary), 0.4);
-  z-index: 5;
-}
-
-.view-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-primary);
+  position: relative;
+  /* Relative target for absolute children */
 }
 
 .top-nav-status {
+  position: absolute;
+  top: 16px;
+  right: 24px;
   display: flex;
   gap: 8px;
+  z-index: 10;
 }
 
 /* View panels wrapper */
@@ -619,7 +634,7 @@ body.light-mode .moon-icon {
 .messages-feed {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 20px;
+  padding: 56px 20px 24px;
   display: flex;
   flex-direction: column;
   max-width: 860px;
@@ -925,7 +940,7 @@ body.light-mode .cit-badge {
 .details-view-container {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 56px 24px 24px;
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
@@ -1085,7 +1100,7 @@ body.light-mode .cit-badge {
 .history-view-container {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 56px 24px 24px;
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
@@ -1128,6 +1143,26 @@ body.light-mode .cit-badge {
 .history-card:hover {
   transform: translateY(-2px);
   border-color: var(--border-color-hover);
+}
+
+.hist-card-delete-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ff4d4d !important;
+  /* Red bin icon! */
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-speed);
+}
+
+.hist-card-delete-btn:hover {
+  color: #ff1a1a !important;
+  background-color: rgba(255, 77, 77, 0.15) !important;
 }
 
 .hist-header {
@@ -1206,7 +1241,7 @@ body.light-mode .cit-badge {
 .profile-view-container {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 56px 24px 24px;
   max-width: 760px;
   width: 100%;
   margin: 0 auto;
@@ -1497,4 +1532,123 @@ body.light-mode .cit-badge {
   .sidebar.active {
     left: 0;
   }
+}
+
+/* 13. Markdown Formatting Elements inside Chat Messages */
+.message-text h1,
+.message-text .md-h1,
+.message-text h2,
+.message-text .md-h2,
+.message-text h3,
+.message-text .md-h3,
+.message-text h4,
+.message-text .md-h4 {
+  margin: 18px 0 8px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.message-text .md-h1 {
+  font-size: 20px;
+}
+
+.message-text .md-h2 {
+  font-size: 18px;
+}
+
+.message-text .md-h3 {
+  font-size: 16px;
+}
+
+.message-text .md-h4 {
+  font-size: 14.5px;
+}
+
+.message-text ul,
+.message-text .md-ul,
+.message-text ol {
+  margin: 12px 0;
+  padding-left: 24px;
+  list-style-type: disc;
+}
+
+.message-text li,
+.message-text .md-li {
+  margin-bottom: 8px;
+  line-height: 1.65;
+  display: list-item;
+}
+
+.message-text hr,
+.message-text .md-hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 20px 0;
+}
+
+.message-text p {
+  margin-bottom: 12px;
+}
+
+/* Hide HTML5 number spinner arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  /* Firefox */
+}
+
+/* Checkbox Alignment & Styling */
+.checkbox-label {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  cursor: pointer;
+  user-select: none;
+  width: fit-content !important;
+  max-width: 100%;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: var(--accent) !important;
+  cursor: pointer;
+  flex-shrink: 0 !important;
+}
+
+/* Shimmer loading animations for sidebar history and history grid */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.sidebar-skeleton-slab {
+  height: 140px;
+  margin: 12px;
+  border-radius: var(--border-radius-md);
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--border-color-hover) 50%, var(--border-color) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.skeleton-card {
+  height: 170px;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+  background: linear-gradient(90deg, var(--card-bg) 25%, var(--border-color) 50%, var(--card-bg) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
 }

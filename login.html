@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaxPilot — Sign In</title>
+  <meta name="description"
+    content="Sign in or create your TaxPilot account to access Pakistan's AI-powered FBR tax assistant.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+
+  <div class="auth-bg">
+    <!-- Ambient glow orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="auth-container">
+
+    <!-- Left Brand Panel -->
+    <div class="brand-panel">
+      <div class="brand-logo">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logoGrad)" stroke="rgba(255,122,0,0.6)" stroke-width="1.5"
+            stroke-linejoin="round" />
+          <path d="M2 17L12 22L22 17" stroke="rgba(255,122,0,0.6)" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round" />
+          <path d="M2 12L12 17L22 12" stroke="rgba(255,122,0,0.6)" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round" />
+          <defs>
+            <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#FF7A00" />
+              <stop offset="1" stop-color="#FF3D00" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="brand-name">TaxPilot</span>
+      </div>
+
+      <div class="brand-tagline">
+        <h1>Tax Intelligence Platform</h1>
+        <p>Powered by LangGraph, RAG retrieval over FBR law, and deterministic slab calculators for Tax Year 2026.</p>
+      </div>
+
+      <ul class="brand-features">
+        <li>Instant salary tax computation with audit log</li>
+        <li>Legal Q&A over Income Tax Ordinance 2001</li>
+        <li>ATL &amp; Non-Filer surcharge detection</li>
+        <li>Full FBR compliance history &amp; citations</li>
+      </ul>
+    </div>
+
+    <!-- Right Auth Panel -->
+    <div class="auth-panel">
+      <div class="auth-card">
+
+        <!-- Tab Switcher -->
+        <div class="tab-switcher">
+          <button id="tab-login" class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+          <button id="tab-register" class="tab-btn" onclick="switchTab('register')">Create Account</button>
+          <div class="tab-indicator" id="tab-indicator"></div>
+        </div>
+
+        <!-- Error / Success Banner -->
+        <div id="auth-message" class="auth-message hidden"></div>
+
+        <!-- ====== LOGIN FORM ====== -->
+        <form id="login-form" class="auth-form active" novalidate>
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              <input type="email" id="login-email" class="auth-input" placeholder="you@example.pk" required
+                autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input type="password" id="login-password" class="auth-input" placeholder="Your password" required
+                autocomplete="current-password">
+              <button type="button" class="toggle-pw-btn" onclick="togglePassword('login-password', this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="auth-btn" id="login-btn">
+            <span class="btn-text">Sign In</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+
+          <p class="auth-switch-text">Don't have an account? <a href="#" onclick="switchTab('register')">Create one
+              free</a></p>
+        </form>
+
+        <!-- ====== REGISTER FORM ====== -->
+        <form id="register-form" class="auth-form" novalidate>
+
+          <!-- Progress Bar -->
+          <div class="signup-progress-container">
+            <div class="signup-progress-bar">
+              <div id="signup-progress-fill"></div>
+            </div>
+            <div class="signup-steps-indicators">
+              <span class="step-indicator active" id="step-ind-1">1</span>
+              <span class="step-indicator" id="step-ind-2">2</span>
+              <span class="step-indicator" id="step-ind-3">3</span>
+            </div>
+            <div class="signup-steps-labels">
+              <span>Account Info</span>
+              <span>Tax Profile</span>
+              <span>Income Details</span>
+            </div>
+          </div>
+
+          <!-- Step 1: Account Information -->
+          <div id="signup-step-1" class="signup-step-section">
+            <div class="form-section-label">Personal Information</div>
+            <div class="form-group">
+              <label for="reg-name">Full Name <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <input type="text" id="reg-name" class="auth-input" placeholder="e.g. Rana Adeel" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="reg-email">Email Address <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                <input type="email" id="reg-email" class="auth-input" placeholder="you@example.pk" required
+                  autocomplete="email">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="reg-password">Password <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <input type="password" id="reg-password" class="auth-input" placeholder="Create a strong password"
+                  required autocomplete="new-password">
+                <button type="button" class="toggle-pw-btn" onclick="togglePassword('reg-password', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+              <div class="pw-strength-bar">
+                <div id="pw-strength-fill"></div>
+              </div>
+            </div>
+
+            <button type="button" class="auth-btn" style="margin-top: 10px;" onclick="goToStep(2)">
+              <span>Next</span>
+            </button>
+          </div>
+
+          <!-- Step 2: FBR Tax Profile -->
+          <div id="signup-step-2" class="signup-step-section hidden">
+            <div class="form-section-label">FBR Tax Identity</div>
+            <div class="form-group">
+              <label for="reg-jurisdiction">Tax Jurisdiction</label>
+              <select id="reg-jurisdiction" class="auth-input auth-select">
+                <option value="RTO Lahore">RTO Lahore</option>
+                <option value="RTO Karachi">RTO Karachi</option>
+                <option value="RTO Islamabad">RTO Islamabad</option>
+                <option value="RTO Peshawar">RTO Peshawar</option>
+                <option value="RTO Quetta">RTO Quetta</option>
+                <option value="RTO Faisalabad">RTO Faisalabad</option>
+                <option value="RTO Multan">RTO Multan</option>
+              </select>
+            </div>
+
+            <div class="form-section-label" style="margin-top: 4px;">Tax Profile</div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="reg-atl">ATL Status</label>
+                <select id="reg-atl" class="auth-input auth-select">
+                  <option value="true">Active Filer (Standard Slabs)</option>
+                  <option value="false">Non-Filer (+100% Surcharge)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="reg-entity">Entity Type</label>
+                <select id="reg-entity" class="auth-input auth-select">
+                  <option value="Individual">Individual</option>
+                  <option value="AOP">Association of Persons (AOP)</option>
+                  <option value="Company">Company</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="reg-residency">Residency Status</label>
+                <select id="reg-residency" class="auth-input auth-select">
+                  <option value="Resident">Resident</option>
+                  <option value="Non-Resident">Non-Resident</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="reg-special">Special Status</label>
+                <select id="reg-special" class="auth-input auth-select">
+                  <option value="None">None</option>
+                  <option value="Ex-Serviceman">Ex-Serviceman</option>
+                  <option value="Senior_Citizen">Senior Citizen</option>
+                  <option value="Disabled">Disabled Person</option>
+                  <option value="Dependent_of_Shaheed">Dependent of Shaheed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="reg-taxyear">Tax Year Context</label>
+              <select id="reg-taxyear" class="auth-input auth-select">
+                <option value="2026">Tax Year 2026 (Current)</option>
+                <option value="2025">Tax Year 2025</option>
+              </select>
+            </div>
+
+            <div class="form-row-2" style="margin-top: 10px; gap: 12px;">
+              <button type="button" class="auth-btn btn-secondary" onclick="goToStep(1)">Back</button>
+              <button type="button" class="auth-btn" onclick="goToStep(3)">Next Step</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Income Declaration Details -->
+          <div id="signup-step-3" class="signup-step-section hidden">
+            <div class="form-section-label">Select All Income Streams That Apply</div>
+
+            <!-- Salary Checkbox & Inputs -->
+            <div class="income-checkbox-group" style="margin-bottom: 12px;">
+              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                <input type="checkbox" id="chk-inc-salary" onchange="toggleIncomeWrapper('salary')" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
+                <span>Salaried Income</span>
+              </label>
+              <div id="wrapper-inc-salary" class="income-input-wrapper hidden" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label for="reg-inc-salary">Gross Annual Salary</label>
+                    <input type="number" id="reg-inc-salary" class="auth-input" placeholder="0" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label for="reg-ded-salary">Admissible Deductions</label>
+                    <input type="number" id="reg-ded-salary" class="auth-input" placeholder="0" min="0">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Business Checkbox & Inputs -->
+            <div class="income-checkbox-group" style="margin-bottom: 12px;">
+              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                <input type="checkbox" id="chk-inc-business" onchange="toggleIncomeWrapper('business')" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
+                <span>Business Income</span>
+              </label>
+              <div id="wrapper-inc-business" class="income-input-wrapper hidden" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                <div class="form-group">
+                  <label for="reg-inc-business">Gross Business Annual Income</label>
+                  <input type="number" id="reg-inc-business" class="auth-input" placeholder="0" min="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Property Checkbox & Inputs -->
+            <div class="income-checkbox-group" style="margin-bottom: 12px;">
+              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                <input type="checkbox" id="chk-inc-property" onchange="toggleIncomeWrapper('property')" style="accent-color: var(--accent); width: 16px; height: 16px; margin: 0;">
+                <span>Property Rental Income</span>
+              </label>
+              <div id="wrapper-inc-property" class="income-input-wrapper hidden" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                <div class="form-group">
+                  <label for="reg-inc-property">Gross Property Annual Income</label>
+                  <input type="number" id="reg-inc-property" class="auth-input" placeholder="0" min="0">
+                </div>
+              </div>
+            </div>
+
+
+
+
+
+            <div class="form-row-2" style="margin-top: 20px; gap: 12px;">
+              <button type="button" class="auth-btn btn-secondary" onclick="goToStep(2)">Back</button>
+              <button type="submit" class="auth-btn" id="register-btn">
+                <span class="btn-text">Create Account</span>
+                <span class="btn-spinner hidden"></span>
+              </button>
+            </div>
+          </div>
+
+          <p class="auth-switch-text">Already have an account? <a href="#" onclick="switchTab('login')">Sign in</a></p>
+        </form>
+
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const API_BASE = window.location.origin && window.location.origin.startsWith("http") ? window.location.origin : "http://127.0.0.1:8000";
+
+    // Multi-step registration flow
+    let signupCurrentStep = 1;
+
+    function goToStep(step) {
+      clearMessage();
+
+      // If proceeding forward from Step 1, validate basic inputs
+      if (step === 2 && signupCurrentStep === 1) {
+        const name = document.getElementById("reg-name").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const password = document.getElementById("reg-password").value;
+
+        if (!name || !email || !password) {
+          showMessage("Full name, email and password are required.", "error");
+          return;
+        }
+        if (password.length < 6) {
+          showMessage("Password must be at least 6 characters.", "error");
+          return;
+        }
+      }
+
+      // Hide all steps
+      document.querySelectorAll(".signup-step-section").forEach(s => s.classList.add("hidden"));
+
+      // Show target step
+      document.getElementById(`signup-step-${step}`).classList.remove("hidden");
+
+      // Progress bar fill calculation
+      const fillPercentage = step === 1 ? 0 : step === 2 ? 50 : 100;
+      document.getElementById("signup-progress-fill").style.width = fillPercentage + "%";
+
+      // Indicators active/completed class update
+      for (let i = 1; i <= 3; i++) {
+        const ind = document.getElementById(`step-ind-${i}`);
+        ind.textContent = i; // Retain step numbers
+        if (i <= step) {
+          ind.className = "step-indicator active";
+        } else {
+          ind.className = "step-indicator";
+        }
+      }
+
+      signupCurrentStep = step;
+    }
+
+    function toggleIncomeWrapper(head) {
+      const chk = document.getElementById(`chk-inc-${head}`);
+      const wrapper = document.getElementById(`wrapper-inc-${head}`);
+      
+      if (chk.checked) {
+        wrapper.style.display = "block";
+        wrapper.classList.remove("hidden");
+      } else {
+        wrapper.style.display = "none";
+        wrapper.classList.add("hidden");
+        if (head === "salary") {
+          document.getElementById("reg-inc-salary").value = "";
+          document.getElementById("reg-ded-salary").value = "";
+        } else {
+          document.getElementById(`reg-inc-${head}`).value = "";
+        }
+      }
+    }
+
+    // Tab switching
+    function switchTab(tab) {
+      const loginForm = document.getElementById("login-form");
+      const registerForm = document.getElementById("register-form");
+      const tabLogin = document.getElementById("tab-login");
+      const tabRegister = document.getElementById("tab-register");
+      const indicator = document.getElementById("tab-indicator");
+
+      clearMessage();
+
+      if (tab === "login") {
+        loginForm.classList.add("active");
+        registerForm.classList.remove("active");
+        tabLogin.classList.add("active");
+        tabRegister.classList.remove("active");
+        indicator.style.transform = "translateX(0%)";
+      } else {
+        loginForm.classList.remove("active");
+        registerForm.classList.add("active");
+        tabLogin.classList.remove("active");
+        tabRegister.classList.add("active");
+        indicator.style.transform = "translateX(100%)";
+        goToStep(1); // Default register wizard to Step 1
+      }
+    }
+
+    // Password visibility toggle
+    function togglePassword(inputId, btn) {
+      const input = document.getElementById(inputId);
+      input.type = input.type === "password" ? "text" : "password";
+      btn.classList.toggle("active");
+    }
+
+    // Password strength indicator
+    document.getElementById("reg-password").addEventListener("input", function () {
+      const val = this.value;
+      const fill = document.getElementById("pw-strength-fill");
+      let strength = 0;
+      if (val.length >= 8) strength++;
+      if (/[A-Z]/.test(val)) strength++;
+      if (/[0-9]/.test(val)) strength++;
+      if (/[^A-Za-z0-9]/.test(val)) strength++;
+      const pct = (strength / 4) * 100;
+      fill.style.width = pct + "%";
+      fill.style.background = strength <= 1 ? "#ef4444" : strength === 2 ? "#f59e0b" : strength === 3 ? "#3b82f6" : "#22c55e";
+    });
+
+    // Show message helper
+    function showMessage(text, type) {
+      const el = document.getElementById("auth-message");
+      el.textContent = text;
+      el.className = "auth-message " + type;
+    }
+
+    function clearMessage() {
+      const el = document.getElementById("auth-message");
+      el.className = "auth-message hidden";
+      el.textContent = "";
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.querySelector(".btn-text").classList.toggle("hidden", loading);
+      btn.querySelector(".btn-spinner").classList.toggle("hidden", !loading);
+      btn.disabled = loading;
+    }
+
+    // Fetch public config from backend to configure Supabase
+    let supabaseClient;
+    async function initSupabase() {
+      try {
+        const res = await fetch(`${API_BASE}/api/config`);
+        const config = await res.json();
+        supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+      } catch (err) {
+        console.error("Failed to load Supabase configuration:", err);
+      }
+    }
+    // Trigger configuration fetch on script load
+    initSupabase();
+
+    // Save session and redirect to main app
+    function saveSessionAndRedirect(user_id, email, full_name, jurisdiction, token, profile = null) {
+      sessionStorage.setItem("taxpilot_user_id", user_id);
+      sessionStorage.setItem("taxpilot_user_email", email);
+      sessionStorage.setItem("taxpilot_user_name", full_name || "");
+      sessionStorage.setItem("taxpilot_user_jurisdiction", jurisdiction || "RTO Lahore");
+      sessionStorage.setItem("taxpilot_token", token);
+
+      if (profile) {
+        sessionStorage.setItem("taxpilot_atl", profile.is_atl_active ? "Active" : "Inactive");
+        sessionStorage.setItem("taxpilot_tax_year", String(profile.tax_year || 2026));
+        sessionStorage.setItem("taxpilot_residency", profile.residency || "Resident");
+        sessionStorage.setItem("taxpilot_entity", profile.entity || "Individual");
+        sessionStorage.setItem("taxpilot_special_status", profile.special_status || "None");
+      } else {
+        // Defaults
+        sessionStorage.setItem("taxpilot_atl", "Active");
+        sessionStorage.setItem("taxpilot_tax_year", "2026");
+        sessionStorage.setItem("taxpilot_residency", "Resident");
+        sessionStorage.setItem("taxpilot_entity", "Individual");
+        sessionStorage.setItem("taxpilot_special_status", "None");
+      }
+
+      window.location.href = "index.html";
+    }
+
+    // Login form handler
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessage();
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+
+      if (!email || !password) {
+        showMessage("Please fill in all fields.", "error");
+        return;
+      }
+
+      if (!supabaseClient) {
+        await initSupabase();
+      }
+      if (!supabaseClient) {
+        showMessage("Auth config could not be loaded. Please verify connection and try again.", "error");
+        return;
+      }
+
+      setLoading("login-btn", true);
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) {
+          showMessage(error.message || "Sign in failed. Please check your credentials.", "error");
+          return;
+        }
+
+        const session = data.session;
+        const user = data.user;
+
+        // Fetch user information from public 'users' table
+        const { data: dbUser, error: dbUserErr } = await supabaseClient
+          .from("users")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const fullNameVal = dbUser ? dbUser.full_name : "";
+        const jurisVal = dbUser ? dbUser.jurisdiction : "RTO Lahore";
+
+        // Fetch profile metadata from public 'tax_profiles' table for TY 2026
+        const { data: dbProfile, error: dbProfileErr } = await supabaseClient
+          .from("tax_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("tax_year", 2026)
+          .maybeSingle();
+
+        saveSessionAndRedirect(user.id, user.email, fullNameVal, jurisVal, session.access_token, dbProfile);
+      } catch (err) {
+        console.error("Login failure:", err);
+        showMessage("An error occurred during login. Please try again.", "error");
+      } finally {
+        setLoading("login-btn", false);
+      }
+    });
+
+    // Register form handler (3-Step Submission)
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearMessage();
+
+      if (signupCurrentStep < 3) {
+        goToStep(signupCurrentStep + 1);
+        return;
+      }
+
+      const full_name = document.getElementById("reg-name").value.trim();
+      const email = document.getElementById("reg-email").value.trim();
+      const password = document.getElementById("reg-password").value;
+      const jurisdiction = document.getElementById("reg-jurisdiction").value;
+      const is_atl_active = document.getElementById("reg-atl").value === "true";
+      const entity = document.getElementById("reg-entity").value;
+      const residency = document.getElementById("reg-residency").value;
+      const special_status = document.getElementById("reg-special").value;
+      const tax_year = parseInt(document.getElementById("reg-taxyear").value);
+
+      if (!full_name || !email || !password) {
+        showMessage("Full name, email and password are required.", "error");
+        return;
+      }
+
+      if (!supabaseClient) {
+        await initSupabase();
+      }
+      if (!supabaseClient) {
+        showMessage("Auth config could not be loaded. Please verify connection and try again.", "error");
+        return;
+      }
+
+      setLoading("register-btn", true);
+      try {
+        // Step A: Register the user with Supabase Auth
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password
+        });
+
+        if (error) {
+          showMessage(error.message || "Registration failed.", "error");
+          setLoading("register-btn", false);
+          return;
+        }
+
+        const user = data.user;
+        const session = data.session;
+
+        // Step B: Write user profile information directly to public metadata tables
+        // Write to 'users'
+        const { error: usersInsError } = await supabaseClient
+          .from("users")
+          .insert({
+            user_id: user.id,
+            email: email,
+            full_name: full_name,
+            jurisdiction: jurisdiction
+          });
+
+        if (usersInsError) {
+          console.error("Error creating user row:", usersInsError);
+        }
+
+        // Write to 'tax_profiles'
+        const { data: dbProfile, error: profileInsError } = await supabaseClient
+          .from("tax_profiles")
+          .insert({
+            user_id: user.id,
+            tax_year: tax_year,
+            is_atl_active: is_atl_active,
+            residency: residency,
+            entity: entity,
+            special_status: special_status,
+            jurisdiction: jurisdiction
+          })
+          .select()
+          .single();
+
+        if (profileInsError) {
+          console.error("Error creating tax profile row:", profileInsError);
+        }
+
+        if (dbProfile) {
+          // Write to 'income_declarations'
+          const declarationsList = [];
+          if (document.getElementById("chk-inc-salary").checked) {
+            declarationsList.push({
+              profile_id: dbProfile.profile_id,
+              user_id: user.id,
+              income_head: "Salary",
+              gross_amount: parseFloat(document.getElementById("reg-inc-salary").value) || 0.0,
+              admissible_deductions: parseFloat(document.getElementById("reg-ded-salary").value) || 0.0
+            });
+          }
+          if (document.getElementById("chk-inc-business").checked) {
+            declarationsList.push({
+              profile_id: dbProfile.profile_id,
+              user_id: user.id,
+              income_head: "Business",
+              gross_amount: parseFloat(document.getElementById("reg-inc-business").value) || 0.0,
+              admissible_deductions: 0.0
+            });
+          }
+          if (document.getElementById("chk-inc-property").checked) {
+            declarationsList.push({
+              profile_id: dbProfile.profile_id,
+              user_id: user.id,
+              income_head: "Property",
+              gross_amount: parseFloat(document.getElementById("reg-inc-property").value) || 0.0,
+              admissible_deductions: 0.0
+            });
+          }
+
+          if (declarationsList.length > 0) {
+            const { error: decInsError } = await supabaseClient
+              .from("income_declarations")
+              .insert(declarationsList);
+            if (decInsError) {
+              console.error("Error creating income declarations:", decInsError);
+            }
+          }
+        }
+
+        showMessage("Account created and configured! Redirecting…", "success");
+        
+        // Wait a tiny bit then redirect
+        const tokenVal = session ? session.access_token : "";
+        setTimeout(() => saveSessionAndRedirect(user.id, user.email, full_name, jurisdiction, tokenVal, dbProfile), 700);
+
+      } catch (err) {
+        console.error("Signup failure:", err);
+        showMessage("An error occurred during registration.", "error");
+      } finally {
+        setLoading("register-btn", false);
+      }
+    });
+
+    // If already logged in, skip auth page
+    if (sessionStorage.getItem("taxpilot_token")) {
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+
+</html>

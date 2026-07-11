@@ -1,0 +1,10 @@
+planner.md
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/

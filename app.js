@@ -1,266 +1,197 @@
-/* ==========================================================================
-   TAX PILOT APPLICATION LOGIC (REVISED DESIGN)
-   ========================================================================== */
+const API_BASE_URL = window.location.origin && window.location.origin.startsWith("http") ? window.location.origin : "http://127.0.0.1:8000";
 
-// 1. Initial Profile State
-let userProfile = JSON.parse(localStorage.getItem("taxpilot_profile")) || {
-  name: "Rana Adeel",
-  email: "adeel.rana@example.pk",
-  ntn: "4892301-4",
-  atlStatus: "Active",
-  taxYear: "2026",
-  jurisdiction: "RTO Lahore, Zone-I"
-};
+let supabaseClient;
+const token = sessionStorage.getItem("taxpilot_token");
+
+async function initSupabase() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/config`);
+    const config = await res.json();
+    supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+    if (token) {
+      await supabaseClient.auth.setSession({
+        access_token: token,
+        refresh_token: ""
+      });
+    }
+  } catch (err) {
+    console.error("Failed to initialize Supabase:", err);
+  }
+}
+initSupabase();
+
+/**
+ * Loads session credentials stored in sessionStorage.
+ * If credentials are not present, redirects the browser context to the login view.
+ * 
+ * @returns {Object|null} The session credentials object or null if redirecting.
+ */
+function getSession() {
+  const uid = sessionStorage.getItem("taxpilot_user_id");
+  const tok = sessionStorage.getItem("taxpilot_token");
+  if (!uid || !tok) {
+    window.location.replace("login.html");
+    return null;
+  }
+  return {
+    user_id:    uid,
+    email:      sessionStorage.getItem("taxpilot_user_email") || "",
+    name:       sessionStorage.getItem("taxpilot_user_name")  || "User",
+    jurisdiction: sessionStorage.getItem("taxpilot_user_jurisdiction") || "RTO Lahore",
+    atlStatus:  sessionStorage.getItem("taxpilot_atl")        || "Active",
+    taxYear:    sessionStorage.getItem("taxpilot_tax_year")   || "2026",
+    residency:  sessionStorage.getItem("taxpilot_residency")  || "Resident",
+    entity:     sessionStorage.getItem("taxpilot_entity")     || "Individual",
+    specialStatus: sessionStorage.getItem("taxpilot_special_status") || "None",
+  };
+}
+
+let session = getSession();
+if (!session) throw new Error("No session — redirecting.");
+
+let chats        = [];
+let currentChatId = null;
+let currentView  = "chat";
+let detailsReferrerView = "chat";
+let theme        = localStorage.getItem("taxpilot_theme") || "dark";
 
 const welcomeGreetings = [
   "How can I help you today?",
   "What are we calculating today?",
-  "Ask me a tax question.",
-  "Let's calculate your tax."
+  "Ask me anything about FBR tax law.",
+  "Let's calculate your tax liability."
 ];
 
-// 2. Initial Mock Chat Data
-const initialMockChats = [
-  {
-    id: "mock-chat-1",
-    topic: "Calculate income tax for annual salary of Rs 1,800,000",
-    taxYear: "2026",
-    atlStatus: "Active",
-    createdDate: "July 01, 2026, 02:30 PM",
-    summary: "User requested a tax calculation for a salaried individual with an annual gross salary of PKR 1,800,000. The active taxpayer status is Filer (Active on ATL). The deterministic calculator computed a total tax liability of PKR 90,000 based on Slab 3 of the First Schedule.",
-    messages: [
-      { sender: "user", text: "Calculate income tax for annual salary of Rs 1,800,000.", timestamp: "02:30 PM" },
-      { 
-        sender: "ai", 
-        text: `Based on the deterministic calculation for <strong>Tax Year 2026</strong>, here is the breakdown of your salary income tax liability.
+const bodyEl              = document.body;
+const themeBtn            = document.getElementById("theme-toggle-btn");
+const themeBtnText        = document.getElementById("theme-toggle-text");
+const profileBtn          = document.getElementById("profile-btn");
+const logoutBtn           = document.getElementById("logout-btn");
+const newChatBtn          = document.getElementById("new-chat-btn");
+const sidebarHistoryBtn   = document.getElementById("sidebar-history-btn");
+const sidebarContainer    = document.getElementById("sidebar-chats-container");
+const sidebarUserName     = document.getElementById("sidebar-user-name");
+const sidebarUserRole     = document.getElementById("sidebar-user-role");
+const navYearVal          = document.getElementById("nav-year-val");
+const navAtlVal           = document.getElementById("nav-atl-val");
 
-<div class="audit-log-box">
-[CALCULATOR NODE - AUDIT LOG]
-User Input Salary: PKR 1,800,000
-Taxpayer Status: Active ATL (Filer)
-Slab Determined: Slab 3 (exceeding PKR 1,200,000 but not exceeding PKR 2,200,000)
-Base Tax: PKR 15,000
-Exceeding Amount: PKR 1,800,000 - PKR 1,200,000 = PKR 600,000
-Variable Rate: 12.5%
-Variable Tax: 12.5% of PKR 600,000 = PKR 75,000
-Calculated Total Tax: PKR 15,000 + PKR 75,000 = PKR 90,000
-No non-ATL surcharge applied.
-</div>
-
-<h3>Tax Computation Summary</h3>
-<table class="tax-table">
-  <thead>
-    <tr>
-      <th>Description</th>
-      <th>Amount (PKR)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Gross Annual Salary</td>
-      <td><strong>1,800,000</strong></td>
-    </tr>
-    <tr>
-      <td>Taxable Income (Section 12)</td>
-      <td>1,800,000</td>
-    </tr>
-    <tr>
-      <td>Applicable Slab (First Schedule)</td>
-      <td>Slab 3 (1.2M to 2.2M)</td>
-    </tr>
-    <tr>
-      <td>Base Tax Rate</td>
-      <td>Rs. 15,000 + 12.5% of amount > 1.2M <a class="cit-badge" data-cit-idx="0">1st Schedule</a></td>
-    </tr>
-    <tr>
-      <td><strong>Total Tax Payable</strong></td>
-      <td><strong>90,000</strong></td>
-    </tr>
-    <tr>
-      <td>Effective Tax Rate</td>
-      <td>5.0%</td>
-    </tr>
-  </tbody>
-</table>
-
-This calculation is strictly deterministic, referencing rates prescribed in the First Schedule, Part I, Division I of the Income Tax Ordinance 2001. <a class="cit-badge" data-cit-idx="0">1st Schedule</a>
-
-<div class="disclaimer-box">
-<strong>FBR Compliance Disclaimer:</strong> This is a simulation based on the approved specs for the current tax year. The results do not constitute professional tax advice. Please verify details before filing your return.
-</div>`,
-        timestamp: "02:31 PM"
-      }
-    ],
-    calculation: {
-      grossSalary: 1800000,
-      taxableSalary: 1800000,
-      taxOwed: 90000,
-      rateText: "Rs. 15,000 + 12.5% of amount exceeding Rs. 1,200,000",
-      effectiveRate: "5.0%"
-    },
-    citations: [
-      {
-        section: "First Schedule, Part I, Division I",
-        text: "Provides progressive tax slabs and rate metrics for salaried individuals (where salary exceeds 75% of taxable income)."
-      },
-      {
-        section: "Section 12 (Salary Income)",
-        text: "Defines taxable salary components, including wages, allowances, and value of perquisites received in the employment context."
-      }
-    ]
-  },
-  {
-    id: "mock-chat-2",
-    topic: "What perks are taxable under Section 12?",
-    taxYear: "2026",
-    atlStatus: "Active",
-    createdDate: "June 28, 2026, 11:15 AM",
-    summary: "Conceptual query exploring the scope of taxable allowances, perquisites, utilities, and perks under Section 12 of Pakistan's Income Tax Ordinance 2001. Maintained that allowances are generally taxable unless specifically exempted.",
-    messages: [
-      { sender: "user", text: "What perks are taxable under Section 12?", timestamp: "11:15 AM" },
-      {
-        sender: "ai",
-        text: `Under <strong>Section 12 of the Income Tax Ordinance 2001</strong>, salary is defined broadly and includes any perquisites (perks), allowances, or benefits provided by an employer. <a class="cit-badge" data-cit-idx="0">Section 12</a>
-
-Key taxable perks include:
-<ol>
-  <li><strong>Perquisites (Section 13):</strong> Valuation rules for company-provided vehicles, housing, and utilities apply. For instance, car benefits are valued at 5% of cost (for personal/business mixed use) or 10% (purely personal use) added directly to taxable income.</li>
-  <li><strong>Allowances:</strong> All allowances (medical, house rent, utilities, utility bills paid directly) are taxable, unless specifically exempted by the Second Schedule of the Ordinance.</li>
-  <li><strong>Exemptions:</strong>
-    <ul>
-      <li>Medical allowance is exempt up to 10% of basic salary if medical facilities are not provided by employer.</li>
-      <li>Travel allowance (TA/DA) is exempt if spent exclusively in performance of employment duties.</li>
-    </ul>
-  </li>
-</ol>
-
-<div class="disclaimer-box">
-<strong>Disclaimer:</strong> Valuation rules are derived from Section 13. Ensure proper accounting of allowances to prevent audit discrepancies.
-</div>`,
-        timestamp: "11:17 AM"
-      }
-    ],
-    calculation: null,
-    citations: [
-      {
-        section: "Section 12 - Salary Income",
-        text: "Declares all compensation, allowances, pensions, gratuities, and perquisites taxable as salary income."
-      },
-      {
-        section: "Section 13 - Value of Perquisites",
-        text: "Specifies mathematical rules for valuation of company assets (cars, housing, interest-free loans) provided to employee."
-      }
-    ]
-  }
-];
-
-// 3. Application State Variables
-let chats = JSON.parse(localStorage.getItem("taxpilot_chats")) || initialMockChats;
-let currentChatId = null;
-let currentView = "chat"; // 'chat' | 'details' | 'history' | 'profile'
-let theme = localStorage.getItem("taxpilot_theme") || "dark";
-
-// DOM References
-const bodyEl = document.body;
-const themeBtn = document.getElementById("theme-toggle-btn");
-const themeBtnText = document.getElementById("theme-toggle-text");
-const profileBtn = document.getElementById("profile-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const newChatBtn = document.getElementById("new-chat-btn");
-const sidebarHistoryBtn = document.getElementById("sidebar-history-btn");
-
-const sidebarContainer = document.getElementById("sidebar-chats-container");
-const currentViewTitle = document.getElementById("current-view-title");
-const sidebarUserName = document.getElementById("sidebar-user-name");
-const sidebarUserRole = document.getElementById("sidebar-user-role");
-
-const navYearVal = document.getElementById("nav-year-val");
-const navAtlVal = document.getElementById("nav-atl-val");
-
-const chatPanel = document.getElementById("chat-panel");
-const chatWelcomeState = document.getElementById("chat-welcome-state");
-const chatMessagesFeed = document.getElementById("chat-messages-feed");
-const chatTextarea = document.getElementById("chat-textarea");
-const sendMsgBtn = document.getElementById("send-msg-btn");
+const chatPanel           = document.getElementById("chat-panel");
+const chatWelcomeState    = document.getElementById("chat-welcome-state");
+const chatMessagesFeed    = document.getElementById("chat-messages-feed");
+const chatTextarea        = document.getElementById("chat-textarea");
+const sendMsgBtn          = document.getElementById("send-msg-btn");
 const aiThinkingIndicator = document.getElementById("ai-thinking-indicator");
-const thinkingStepText = document.getElementById("thinking-step");
+const thinkingStepText    = document.getElementById("thinking-step");
 
-const detailsPanel = document.getElementById("details-panel");
-const detailsBackBtn = document.getElementById("details-back-btn");
-const detailsTopic = document.getElementById("details-topic");
-const detailsTimestamp = document.getElementById("details-timestamp");
-const detailsSummaryText = document.getElementById("details-summary-text");
-const detailsMetaYear = document.getElementById("details-meta-year");
-const detailsMetaAtl = document.getElementById("details-meta-atl");
+const detailsPanel        = document.getElementById("details-panel");
+const detailsBackBtn      = document.getElementById("details-back-btn");
+const detailsTopic        = document.getElementById("details-topic");
+const detailsTimestamp    = document.getElementById("details-timestamp");
+const detailsSummaryText  = document.getElementById("details-summary-text");
+const detailsMetaYear     = document.getElementById("details-meta-year");
+const detailsMetaAtl      = document.getElementById("details-meta-atl");
 const detailsMetaCategory = document.getElementById("details-meta-category");
-const detailsCalcCard = document.getElementById("details-calc-card");
-const detailsCalcContent = document.getElementById("details-calc-content");
+const detailsCalcCard     = document.getElementById("details-calc-card");
+const detailsCalcContent  = document.getElementById("details-calc-content");
 const detailsCitationsList = document.getElementById("details-citations-list");
-const resumeChatBtn = document.getElementById("resume-chat-btn");
+const resumeChatBtn       = document.getElementById("resume-chat-btn");
 
-const historyPanel = document.getElementById("history-panel");
-const historyCardsGrid = document.getElementById("history-cards-grid");
+const historyPanel        = document.getElementById("history-panel");
+const historyCardsGrid    = document.getElementById("history-cards-grid");
 
-// Profile view panel refs
-const profilePanel = document.getElementById("profile-panel");
-const profileEditForm = document.getElementById("profile-edit-form");
-const profileInputName = document.getElementById("profile-input-name");
-const profileInputEmail = document.getElementById("profile-input-email");
-const profileInputNtn = document.getElementById("profile-input-ntn");
-const profileInputAtl = document.getElementById("profile-input-atl");
-const profileInputYear = document.getElementById("profile-input-year");
-const profileCancelBtn = document.getElementById("profile-cancel-btn");
+const profilePanel        = document.getElementById("profile-panel");
+const profileEditForm     = document.getElementById("profile-edit-form");
+const profileInputName    = document.getElementById("profile-input-name");
+const profileInputEmail   = document.getElementById("profile-input-email");
+const profileInputJurisdiction = document.getElementById("profile-input-jurisdiction");
+const profileInputAtl     = document.getElementById("profile-input-atl");
+const profileInputYear    = document.getElementById("profile-input-year");
+const profileInputResidency = document.getElementById("profile-input-residency");
+const profileInputEntity  = document.getElementById("profile-input-entity");
+const profileInputSpecial = document.getElementById("profile-input-special");
+const profileInputIncSalary = document.getElementById("profile-input-inc-salary");
+const profileInputDedSalary = document.getElementById("profile-input-ded-salary");
+const profileInputIncBusiness = document.getElementById("profile-input-inc-business");
+const profileInputIncProperty = document.getElementById("profile-input-inc-property");
+const profileCancelBtn    = document.getElementById("profile-cancel-btn");
 
-// Modals
-const logoutModal = document.getElementById("logout-modal");
-const closeLogoutBtn = document.getElementById("close-logout-btn");
-const cancelLogoutBtn = document.getElementById("cancel-logout-btn");
-const confirmLogoutBtn = document.getElementById("confirm-logout-btn");
+const logoutModal         = document.getElementById("logout-modal");
+const closeLogoutBtn      = document.getElementById("close-logout-btn");
+const cancelLogoutBtn     = document.getElementById("cancel-logout-btn");
+const confirmLogoutBtn    = document.getElementById("confirm-logout-btn");
 
-// 4. Setup App Initialization
-function initApp() {
+/**
+ * Initializes the application state, theme, configurations, and triggers background data fetches.
+ */
+async function initApp() {
   applyTheme(theme);
   updateProfileUILabels();
-  renderSidebar();
-  renderHistoryGrid();
-  setupEventListeners();
   adjustTextareaHeight();
-  
-  // Set random sleek greeting on start
   applyRandomGreeting();
-  
-  // Set default screen layout
   switchView("chat");
+  await loadChatsFromBackend();
 }
 
-// Helper to select a random greeting variant
+/**
+ * Cyclically updates the chat entry greet banner text block.
+ */
 function applyRandomGreeting() {
-  const welcomeTextEl = chatWelcomeState.querySelector(".welcome-greeting");
-  if (welcomeTextEl) {
-    const randomIdx = Math.floor(Math.random() * welcomeGreetings.length);
-    welcomeTextEl.textContent = welcomeGreetings[randomIdx];
+  const el = chatWelcomeState.querySelector(".welcome-greeting");
+  if (el) el.textContent = welcomeGreetings[Math.floor(Math.random() * welcomeGreetings.length)];
+}
+
+/**
+ * Requests list of historical chat consultations from backend database.
+ */
+async function loadChatsFromBackend() {
+  sidebarContainer.innerHTML = `<div class="sidebar-skeleton-slab"></div>`;
+  historyCardsGrid.innerHTML = `
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>`;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chats/user/${session.user_id}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    chats = data.map(t => ({
+      id:          t.thread_id,
+      topic:       t.title,
+      taxYear:     session.taxYear,
+      atlStatus:   session.atlStatus,
+      createdDate: t.created_at
+        ? new Date(t.created_at).toLocaleString([], { month:"short", day:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })
+        : "—",
+      summary:     t.summary || "",
+      messages:    [],
+      calculation: t.calculation_cache || null,
+      citations:   t.citations_cache   || []
+    }));
+    renderSidebar();
+    renderHistoryGrid();
+  } catch (e) {
+    console.error("Failed to load chats:", e);
   }
 }
 
-// 5. UI View Switching & Layout Configurations
+/**
+ * Navigates system layouts and visual states between views.
+ * 
+ * @param {string} view The target view identifier ('chat', 'history', 'details', 'profile').
+ */
 function switchView(view) {
   currentView = view;
-  
-  // Update view visibility classes
   chatPanel.classList.remove("active");
   detailsPanel.classList.remove("active");
   historyPanel.classList.remove("active");
   profilePanel.classList.remove("active");
-  
-  // Sidebar button selections
   sidebarHistoryBtn.classList.remove("active");
   profileBtn.classList.remove("active");
-  
+
   if (view === "chat") {
     chatPanel.classList.add("active");
-    currentViewTitle.textContent = ""; // Blank top left text as requested
-    
-    // Check if we should center input box
     if (currentChatId) {
       chatPanel.classList.remove("welcome-state-active");
       chatWelcomeState.classList.add("hidden");
@@ -273,25 +204,25 @@ function switchView(view) {
   } else if (view === "history") {
     historyPanel.classList.add("active");
     sidebarHistoryBtn.classList.add("active");
-    currentViewTitle.textContent = "History"; // Changed to History
     renderHistoryGrid();
   } else if (view === "details") {
     detailsPanel.classList.add("active");
-    currentViewTitle.textContent = "Details"; // Changed to Details
   } else if (view === "profile") {
     profilePanel.classList.add("active");
     profileBtn.classList.add("active");
-    currentViewTitle.textContent = "Profile"; // Changed to Profile
     loadProfileFields();
   }
 }
 
-// 6. Theme Control
-function applyTheme(newTheme) {
-  theme = newTheme;
-  localStorage.setItem("taxpilot_theme", theme);
-  
-  if (theme === "light") {
+/**
+ * Sets application dark or light mode configurations.
+ * 
+ * @param {string} t The theme variant string ('light', 'dark').
+ */
+function applyTheme(t) {
+  theme = t;
+  localStorage.setItem("taxpilot_theme", t);
+  if (t === "light") {
     bodyEl.classList.remove("dark-mode");
     bodyEl.classList.add("light-mode");
     themeBtnText.textContent = "Dark Mode";
@@ -302,63 +233,356 @@ function applyTheme(newTheme) {
   }
 }
 
-function toggleTheme() {
-  applyTheme(theme === "dark" ? "light" : "dark");
+/**
+ * Toggles active visual style modes.
+ */
+function toggleTheme() { 
+  applyTheme(theme === "dark" ? "light" : "dark"); 
 }
 
-// 7. Profile Information Controllers
+/**
+ * Updates navbar credentials labels, badges, and avatar initials.
+ */
 function updateProfileUILabels() {
-  // Sidebar
-  sidebarUserName.textContent = userProfile.name;
-  sidebarUserRole.textContent = `Salaried • ${userProfile.atlStatus} ATL`;
-  
-  // Navigation Headers
-  navYearVal.textContent = `TY ${userProfile.taxYear}`;
-  navAtlVal.textContent = `${userProfile.atlStatus} ATL`;
-  
-  if (userProfile.atlStatus === "Inactive") {
-    navAtlVal.className = "badge badge-atl non-filer";
-  } else {
-    navAtlVal.className = "badge badge-atl";
+  sidebarUserName.textContent = session.name;
+  sidebarUserRole.textContent = `${session.entity} • ${session.atlStatus} ATL`;
+  navYearVal.textContent = `TY ${session.taxYear}`;
+  navAtlVal.textContent  = `${session.atlStatus} ATL`;
+  navAtlVal.className    = session.atlStatus === "Inactive"
+    ? "badge badge-atl non-filer" : "badge badge-atl";
+
+  const avatarSpan = document.querySelector("#profile-btn .user-avatar span");
+  if (avatarSpan && session.name) {
+    const parts = session.name.trim().split(/\s+/);
+    let initials = "";
+    if (parts.length > 0) {
+      if (parts.length === 1) {
+        initials = parts[0].charAt(0).toUpperCase();
+      } else {
+        initials = (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+      }
+    }
+    avatarSpan.textContent = initials || "RA";
   }
 }
 
-function loadProfileFields() {
-  profileInputName.value = userProfile.name;
-  profileInputEmail.value = userProfile.email;
-  profileInputNtn.value = userProfile.ntn;
-  profileInputAtl.value = userProfile.atlStatus;
-  profileInputYear.value = userProfile.taxYear;
+/**
+ * Fetches declarations and profile metadata from Postgres, loading them inside edit inputs.
+ */
+async function loadProfileFields() {
+  profileInputName.value         = session.name;
+  profileInputEmail.value        = session.email;
+  profileInputJurisdiction.value = session.jurisdiction;
+  profileInputAtl.value          = session.atlStatus;
+  profileInputYear.value         = session.taxYear;
+  profileInputResidency.value    = session.residency;
+  profileInputEntity.value       = session.entity;
+  profileInputSpecial.value      = session.specialStatus;
+
+  if (!supabaseClient) {
+    await initSupabase();
+  }
+  if (!supabaseClient) {
+    console.error("Supabase client not initialized.");
+    return;
+  }
+
+  try {
+    // 1. Fetch user data (full_name) from 'users'
+    const { data: dbUser, error: dbUserErr } = await supabaseClient
+      .from("users")
+      .select("full_name")
+      .eq("user_id", session.user_id)
+      .maybeSingle();
+
+    if (dbUser) {
+      profileInputName.value = dbUser.full_name || "";
+    }
+
+    // 2. Fetch active profile from 'tax_profiles' for current taxYear, including declarations
+    const { data: dbProfile, error: dbProfileErr } = await supabaseClient
+      .from("tax_profiles")
+      .select("*, income_declarations(*)")
+      .eq("user_id", session.user_id)
+      .eq("tax_year", parseInt(session.taxYear))
+      .maybeSingle();
+
+    let profile = dbProfile;
+    // If profile doesn't exist, create it (matching legacy backend default-on-demand)
+    if (!profile) {
+      const { data: newProfile, error: insError } = await supabaseClient
+        .from("tax_profiles")
+        .insert({
+          user_id: session.user_id,
+          tax_year: parseInt(session.taxYear),
+          is_atl_active: session.atlStatus === "Active",
+          residency: session.residency,
+          entity: session.entity,
+          special_status: session.specialStatus,
+          jurisdiction: session.jurisdiction || "RTO Lahore"
+        })
+        .select()
+        .single();
+      
+      profile = newProfile;
+    }
+
+    if (profile) {
+      profileInputJurisdiction.value = profile.jurisdiction || "RTO Lahore";
+      profileInputAtl.value = profile.is_atl_active ? "Active" : "Inactive";
+      profileInputYear.value = String(profile.tax_year || 2026);
+      profileInputResidency.value = profile.residency || "Resident";
+      profileInputEntity.value = profile.entity || "Individual";
+      profileInputSpecial.value = profile.special_status || "None";
+    }
+
+    // Map declarations list to a key-value dict (matching legacy structure)
+    const decsList = (profile && profile.income_declarations) || [];
+    const decs = {};
+    decsList.forEach(d => {
+      decs[d.income_head] = { gross: parseFloat(d.gross_amount), deductions: parseFloat(d.admissible_deductions) };
+    });
+
+    const checkAndPopulate = (head, inputEl, val) => {
+      const chk = document.getElementById(`profile-chk-${head}`);
+      const wrapper = document.getElementById(`profile-wrapper-${head}`);
+      if (val > 0) {
+        chk.checked = true;
+        wrapper.style.display = "block";
+        wrapper.classList.remove("hidden");
+        inputEl.value = val;
+      } else {
+        chk.checked = false;
+        wrapper.style.display = "none";
+        wrapper.classList.add("hidden");
+        inputEl.value = "";
+      }
+    };
+
+    const salGross = decs.Salary ? decs.Salary.gross : 0;
+    const salDeds = decs.Salary ? decs.Salary.deductions : 0;
+    const chkSalary = document.getElementById("profile-chk-salary");
+    const wrapSalary = document.getElementById("profile-wrapper-salary");
+    if (salGross > 0 || salDeds > 0) {
+      chkSalary.checked = true;
+      wrapSalary.style.display = "block";
+      wrapSalary.classList.remove("hidden");
+      profileInputIncSalary.value = salGross || "";
+      profileInputDedSalary.value = salDeds || "";
+    } else {
+      chkSalary.checked = false;
+      wrapSalary.style.display = "none";
+      wrapSalary.classList.add("hidden");
+      profileInputIncSalary.value = "";
+      profileInputDedSalary.value = "";
+    }
+
+    checkAndPopulate("business", profileInputIncBusiness, decs.Business ? decs.Business.gross : 0);
+    checkAndPopulate("property", profileInputIncProperty, decs.Property ? decs.Property.gross : 0);
+
+  } catch (err) {
+    console.error("Failed to load profile details from Supabase:", err);
+  }
 }
 
-function saveProfile(e) {
+/**
+ * Toggles visibility wrappers dynamically when checking input heads.
+ * 
+ * @param {string} head The income head name.
+ */
+function toggleProfileIncomeWrapper(head) {
+  const chk = document.getElementById(`profile-chk-${head}`);
+  const wrapper = document.getElementById(`profile-wrapper-${head}`);
+  if (chk.checked) {
+    wrapper.style.display = "block";
+    wrapper.classList.remove("hidden");
+  } else {
+    wrapper.style.display = "none";
+    wrapper.classList.add("hidden");
+    if (head === "salary") {
+      profileInputIncSalary.value = "";
+      profileInputDedSalary.value = "";
+    } else {
+      document.getElementById(`profile-input-inc-${head}`).value = "";
+    }
+  }
+}
+
+/**
+ * Submits form data to profile and declaration updating endpoints.
+ * 
+ * @param {Event} e The form submit event.
+ */
+async function saveProfile(e) {
   e.preventDefault();
-  
-  userProfile.name = profileInputName.value.trim();
-  userProfile.email = profileInputEmail.value.trim();
-  userProfile.ntn = profileInputNtn.value.trim();
-  userProfile.atlStatus = profileInputAtl.value;
-  userProfile.taxYear = profileInputYear.value;
-  
-  localStorage.setItem("taxpilot_profile", JSON.stringify(userProfile));
+  const submitBtn = profileEditForm.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Saving...";
+  submitBtn.disabled = true;
+  submitBtn.style.backgroundColor = "#5a5a72";
+  submitBtn.style.cursor = "not-allowed";
+
+  session.name          = profileInputName.value.trim();
+  session.jurisdiction  = profileInputJurisdiction.value.trim();
+  session.atlStatus     = profileInputAtl.value;
+  session.taxYear       = profileInputYear.value;
+  session.residency     = profileInputResidency.value;
+  session.entity        = profileInputEntity.value;
+  session.specialStatus = profileInputSpecial.value;
+
+  sessionStorage.setItem("taxpilot_user_name",         session.name);
+  sessionStorage.setItem("taxpilot_user_jurisdiction", session.jurisdiction);
+  sessionStorage.setItem("taxpilot_atl",               session.atlStatus);
+  sessionStorage.setItem("taxpilot_tax_year",          session.taxYear);
+  sessionStorage.setItem("taxpilot_residency",         session.residency);
+  sessionStorage.setItem("taxpilot_entity",            session.entity);
+  sessionStorage.setItem("taxpilot_special_status",    session.specialStatus);
+
   updateProfileUILabels();
-  
-  alert("Profile settings saved successfully!");
-  switchView("chat");
+
+  if (!supabaseClient) {
+    await initSupabase();
+  }
+  if (!supabaseClient) {
+    showCustomAlert("Error", "Auth config could not be loaded. Please verify connection.");
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+    submitBtn.style.backgroundColor = "";
+    submitBtn.style.cursor = "";
+    return;
+  }
+
+  try {
+    // 1. Update name on 'users' table
+    const { error: userUpdErr } = await supabaseClient
+      .from("users")
+      .update({ full_name: session.name })
+      .eq("user_id", session.user_id);
+
+    if (userUpdErr) console.error("Error updating user record:", userUpdErr);
+
+    const taxYearInt = parseInt(session.taxYear);
+
+    // 2. Fetch or create the target profile record in 'tax_profiles'
+    let { data: profile, error: profFetchErr } = await supabaseClient
+      .from("tax_profiles")
+      .select("*")
+      .eq("user_id", session.user_id)
+      .eq("tax_year", taxYearInt)
+      .maybeSingle();
+
+    if (!profile) {
+      // Create new profile record
+      const { data: newProfile, error: profInsErr } = await supabaseClient
+        .from("tax_profiles")
+        .insert({
+          user_id: session.user_id,
+          tax_year: taxYearInt,
+          is_atl_active: session.atlStatus === "Active",
+          residency: session.residency,
+          entity: session.entity,
+          special_status: session.specialStatus,
+          jurisdiction: session.jurisdiction
+        })
+        .select()
+        .single();
+      
+      profile = newProfile;
+    } else {
+      // Update existing profile record
+      const { data: updatedProfile, error: profUpdErr } = await supabaseClient
+        .from("tax_profiles")
+        .update({
+          is_atl_active: session.atlStatus === "Active",
+          residency: session.residency,
+          entity: session.entity,
+          special_status: session.specialStatus,
+          jurisdiction: session.jurisdiction
+        })
+        .eq("profile_id", profile.profile_id)
+        .select()
+        .single();
+      
+      profile = updatedProfile;
+    }
+
+    if (profile) {
+      // 3. Upsert income declarations
+      const declarationsList = [
+        {
+          profile_id: profile.profile_id,
+          user_id: session.user_id,
+          income_head: "Salary",
+          gross_amount: document.getElementById("profile-chk-salary").checked ? (parseFloat(profileInputIncSalary.value) || 0.0) : 0.0,
+          admissible_deductions: document.getElementById("profile-chk-salary").checked ? (parseFloat(profileInputDedSalary.value) || 0.0) : 0.0
+        },
+        {
+          profile_id: profile.profile_id,
+          user_id: session.user_id,
+          income_head: "Business",
+          gross_amount: document.getElementById("profile-chk-business").checked ? (parseFloat(profileInputIncBusiness.value) || 0.0) : 0.0,
+          admissible_deductions: 0.0
+        },
+        {
+          profile_id: profile.profile_id,
+          user_id: session.user_id,
+          income_head: "Property",
+          gross_amount: document.getElementById("profile-chk-property").checked ? (parseFloat(profileInputIncProperty.value) || 0.0) : 0.0,
+          admissible_deductions: 0.0
+        }
+      ];
+
+      // Perform updates or inserts
+      for (const dec of declarationsList) {
+        const { data: existingDec, error: existingDecErr } = await supabaseClient
+          .from("income_declarations")
+          .select("*")
+          .eq("profile_id", profile.profile_id)
+          .eq("income_head", dec.income_head)
+          .maybeSingle();
+        
+        if (existingDec) {
+          await supabaseClient
+            .from("income_declarations")
+            .update({
+              gross_amount: dec.gross_amount,
+              admissible_deductions: dec.admissible_deductions
+            })
+            .eq("declaration_id", existingDec.declaration_id);
+        } else {
+          await supabaseClient
+            .from("income_declarations")
+            .insert(dec);
+        }
+      }
+    }
+
+    showCustomAlert("Success", "Profile and income declarations saved successfully!");
+  } catch (err) {
+    console.error("Profile sync failed:", err);
+    showCustomAlert("Error", "Failed to save profile changes. Please try again.");
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+    submitBtn.style.backgroundColor = "";
+    submitBtn.style.cursor = "";
+  }
 }
 
-// 8. Recent Chat Sidebar Renderer
+/**
+ * Builds the sidebar list view.
+ */
 function renderSidebar() {
   sidebarContainer.innerHTML = "";
-  
-  // Render chats list (reversed to show newest first)
-  const sortedChats = [...chats].reverse();
-  
-  sortedChats.forEach(chat => {
+  const sorted = chats;
+  if (!sorted.length) {
+    sidebarContainer.innerHTML = `<div class="sidebar-section-title" style="text-align:center;text-transform:none;margin-top:15px;">No chats yet.</div>`;
+    return;
+  }
+  sorted.forEach(chat => {
     const item = document.createElement("button");
-    item.className = `sidebar-chat-item ${chat.id === currentChatId && currentView === 'chat' ? 'active' : ''}`;
+    item.className = `sidebar-chat-item ${chat.id === currentChatId && currentView === "chat" ? "active" : ""}`;
     item.setAttribute("data-id", chat.id);
-    
     item.innerHTML = `
       <div class="sidebar-chat-content">
         <svg class="sidebar-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -366,236 +590,342 @@ function renderSidebar() {
         </svg>
         <span class="sidebar-chat-title">${chat.topic}</span>
       </div>
-      <button class="sidebar-chat-delete-btn" title="Delete Chat" data-id="${chat.id}">
+      <button class="sidebar-chat-delete-btn" title="Delete" data-id="${chat.id}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         </svg>
-      </button>
-    `;
-    
-    // Add Click listener to open chat details
-    item.addEventListener("click", (e) => {
+      </button>`;
+    item.addEventListener("click", e => {
       if (e.target.closest(".sidebar-chat-delete-btn")) return;
       openChatDetails(chat.id);
     });
-    
-    // Delete event listener
-    const deleteBtn = item.querySelector(".sidebar-chat-delete-btn");
-    deleteBtn.addEventListener("click", (e) => {
+    item.querySelector(".sidebar-chat-delete-btn").addEventListener("click", e => {
       e.stopPropagation();
       deleteChat(chat.id);
     });
-    
     sidebarContainer.appendChild(item);
   });
-  
-  if (sortedChats.length === 0) {
-    sidebarContainer.innerHTML = `<div class="sidebar-section-title" style="text-align: center; text-transform: none; margin-top: 15px;">No chats yet.</div>`;
-  }
 }
 
-// 9. History Cards Grid Renderer
+/**
+ * Builds history panels with list view cards.
+ */
 function renderHistoryGrid() {
   historyCardsGrid.innerHTML = "";
-  
+  if (!chats.length) {
+    historyCardsGrid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 20px;" class="card-glass border-color">
+        <p style="color:var(--text-secondary);font-size:14px;">No history yet. Start a new chat to create your first consultation.</p>
+      </div>`;
+    return;
+  }
   chats.forEach(chat => {
+    const taxLabel = chat.calculation
+      ? `TY ${chat.taxYear} • Tax: PKR ${Number(chat.calculation.taxOwed || 0).toLocaleString()}`
+      : `TY ${chat.taxYear} • Legal Ask`;
     const card = document.createElement("div");
     card.className = "history-card";
-    
-    const taxLabel = chat.calculation ? `TY ${chat.taxYear} • Tax: PKR ${chat.calculation.taxOwed.toLocaleString()}` : `TY ${chat.taxYear} • Legal Ask`;
-    
     card.innerHTML = `
       <div class="hist-header">
         <span class="hist-date">${chat.createdDate}</span>
-        <span class="hist-tax-tag">${chat.atlStatus} Filer</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="hist-tax-tag">${chat.atlStatus} Filer</span>
+          <button class="hist-card-delete-btn" title="Delete Consultation" data-id="${chat.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div style="flex: 1; display: flex; flex-direction: column;">
+      <div style="flex:1;display:flex;flex-direction:column;">
         <h4 class="hist-title">${chat.topic}</h4>
-        <p class="hist-snippet">${chat.summary || "Conceptual tax consultation."}</p>
+        <p class="hist-snippet">${chat.summary || "FBR tax consultation."}</p>
       </div>
       <div class="hist-footer">
         <span class="hist-date">${taxLabel}</span>
         <div class="hist-card-arrow">
           <span>Details</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon-small">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
+            <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
           </svg>
         </div>
-      </div>
-    `;
-    
-    card.addEventListener("click", () => {
+      </div>`;
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".hist-card-delete-btn")) return;
       openChatDetails(chat.id);
     });
-    
+    card.querySelector(".hist-card-delete-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteChat(chat.id);
+    });
     historyCardsGrid.appendChild(card);
   });
-  
-  if (chats.length === 0) {
-    historyCardsGrid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;" class="card-glass border-color">
-        <p style="color: var(--text-secondary); font-size: 14px;">No chats in history. Start a new chat session to generate tax calculations.</p>
-      </div>
-    `;
-  }
 }
 
-// 10. Open Chat Details Screen
+/**
+ * Loads metadata summaries and dynamic calculations of a specific thread, rendering them on details panels.
+ * 
+ * @param {string} chatId The chat session thread ID.
+ */
 function openChatDetails(chatId) {
+  detailsReferrerView = currentView;
   currentChatId = chatId;
   const chat = chats.find(c => c.id === chatId);
   if (!chat) return;
-  
-  // Highlight active sidebar item
   renderSidebar();
-  
-  // Populate Detail elements
-  detailsTopic.textContent = chat.topic;
+
+  detailsTopic.textContent     = chat.topic;
   detailsTimestamp.textContent = `Created on: ${chat.createdDate}`;
-  detailsSummaryText.innerHTML = chat.summary || "No summary profile generated for this chat query.";
-  
-  detailsMetaYear.textContent = chat.taxYear;
-  detailsMetaAtl.textContent = chat.atlStatus;
-  
-  if (chat.atlStatus === "Inactive") {
-    detailsMetaAtl.className = "meta-value badge badge-atl non-filer";
+  detailsSummaryText.textContent = chat.summary || "No summary available for this session.";
+  detailsMetaYear.textContent  = chat.taxYear;
+  detailsMetaAtl.textContent   = chat.atlStatus;
+  detailsMetaAtl.className     = chat.atlStatus === "Inactive"
+    ? "meta-value badge badge-atl non-filer" : "meta-value badge badge-atl";
+
+  let isSalaried = true;
+  if (chat.calculation) {
+    const hasSalary = (chat.calculation.salaryIncome && chat.calculation.salaryIncome > 0);
+    const hasOthers = (chat.calculation.businessIncome > 0 || chat.calculation.rentalIncome > 0);
+    if (!hasSalary && hasOthers) {
+      isSalaried = false;
+    }
   } else {
-    detailsMetaAtl.className = "meta-value badge badge-atl";
+    const chkSalary = document.getElementById("profile-chk-salary");
+    const chkBusiness = document.getElementById("profile-chk-business");
+    const chkProperty = document.getElementById("profile-chk-property");
+    if (chkSalary && !chkSalary.checked && ((chkBusiness && chkBusiness.checked) || (chkProperty && chkProperty.checked))) {
+      isSalaried = false;
+    }
   }
 
-  // Populate calculations log
+  if (detailsMetaCategory) {
+    detailsMetaCategory.textContent = isSalaried 
+      ? "Salaried Individual (Income Tax Ordinance)" 
+      : "Non-Salaried / Business (Income Tax Ordinance)";
+  }
+
   if (chat.calculation) {
     detailsCalcCard.classList.remove("hidden");
-    detailsCalcContent.innerHTML = `
-      <div class="calc-field-row">
-        <span class="field-label">Gross Salary</span>
-        <span class="field-value">PKR ${chat.calculation.grossSalary.toLocaleString()}</span>
-      </div>
-      <div class="calc-field-row">
-        <span class="field-label">Taxable Salary</span>
-        <span class="field-value">PKR ${chat.calculation.taxableSalary.toLocaleString()}</span>
-      </div>
-      <div class="calc-field-row">
-        <span class="field-label">Applied Slab Formula</span>
-        <span class="field-value" style="font-size: 11px; max-width: 65%; text-align: right;">${chat.calculation.rateText}</span>
-      </div>
-      <div class="calc-field-row">
-        <span class="field-label">Effective Rate</span>
-        <span class="field-value">${chat.calculation.effectiveRate}</span>
-      </div>
-      <div class="calc-field-row">
-        <span class="field-label">Total Salary Tax Payable</span>
-        <span class="field-value text-success font-semibold">PKR ${chat.calculation.taxOwed.toLocaleString()}</span>
-      </div>
-    `;
+    let rowsHtml = "";
+    
+    if (chat.calculation.salaryIncome && chat.calculation.salaryIncome > 0) {
+      rowsHtml += `<div class="calc-field-row"><span class="field-label">Salary Income</span><span class="field-value">PKR ${Number(chat.calculation.salaryIncome).toLocaleString()}</span></div>`;
+    }
+    if (chat.calculation.businessIncome && chat.calculation.businessIncome > 0) {
+      rowsHtml += `<div class="calc-field-row"><span class="field-label">Business Income</span><span class="field-value">PKR ${Number(chat.calculation.businessIncome).toLocaleString()}</span></div>`;
+    }
+    if (chat.calculation.rentalIncome && chat.calculation.rentalIncome > 0) {
+      rowsHtml += `<div class="calc-field-row"><span class="field-label">Property Rental Income</span><span class="field-value">PKR ${Number(chat.calculation.rentalIncome).toLocaleString()}</span></div>`;
+    }
+    
+    rowsHtml += `
+      <div class="calc-field-row" style="border-top: 1px solid var(--border-color); padding-top: 8px;"><span class="field-label">Total Taxable Income</span><span class="field-value">PKR ${Number(chat.calculation.taxableSalary||0).toLocaleString()}</span></div>
+      <div class="calc-field-row"><span class="field-label">Slab Formulas</span><span class="field-value" style="font-size:11px;max-width:65%;text-align:right;">${chat.calculation.rateText||"—"}</span></div>
+      <div class="calc-field-row"><span class="field-label">Effective Rate</span><span class="field-value">${chat.calculation.effectiveRate||"—"}</span></div>
+      <div class="calc-field-row"><span class="field-label">Total Tax Payable</span><span class="field-value text-success font-semibold">PKR ${Number(chat.calculation.taxOwed||0).toLocaleString()}</span></div>`;
+      
+    detailsCalcContent.innerHTML = rowsHtml;
   } else {
     detailsCalcCard.classList.add("hidden");
   }
 
-  // Populate Citations
   detailsCitationsList.innerHTML = "";
-  if (chat.citations && chat.citations.length > 0) {
+  if (chat.citations && chat.citations.length) {
     chat.citations.forEach(cit => {
       const li = document.createElement("li");
       li.className = "citation-detail-item";
-      li.innerHTML = `
-        <div class="cit-title">${cit.section}</div>
-        <div class="cit-text">${cit.text}</div>
-      `;
+      li.style.cursor = "pointer";
+      const cleanHeader = getCleanCitationHeader(cit.section || cit);
+      li.innerHTML = `<div class="cit-title" style="color: var(--accent-glow-color); text-decoration: underline;">${cleanHeader}</div>`;
+      li.addEventListener("click", (e) => {
+        e.preventDefault();
+        openCitationPdf(cit.section || cit);
+      });
       detailsCitationsList.appendChild(li);
     });
   } else {
-    detailsCitationsList.innerHTML = `<li class="details-subtitle">No statutory citations generated for this conversation.</li>`;
+    detailsCitationsList.innerHTML = `<li class="details-subtitle">No citations for this conversation.</li>`;
   }
-  
+
   switchView("details");
 }
 
-// 11. Load Active Chat Panel
-function loadActiveChat(chatId) {
+/**
+ * Requests full message lists from backend for a specific thread, rendering them on feed layouts.
+ * 
+ * @param {string} chatId The chat session thread ID.
+ */
+async function loadActiveChat(chatId) {
   currentChatId = chatId;
-  const chat = chats.find(c => c.id === chatId);
-  if (!chat) return;
-  
-  // Sync state values to indicators
-  navYearVal.textContent = `TY ${chat.taxYear}`;
-  navAtlVal.textContent = `${chat.atlStatus} ATL`;
-  
-  if (chat.atlStatus === "Inactive") {
-    navAtlVal.className = "badge badge-atl non-filer";
-  } else {
-    navAtlVal.className = "badge badge-atl";
-  }
-  
-  // Render message logs
   chatPanel.classList.remove("welcome-state-active");
   chatWelcomeState.classList.add("hidden");
   chatMessagesFeed.classList.remove("hidden");
   chatMessagesFeed.innerHTML = "";
-  
-  chat.messages.forEach(msg => {
-    appendMessageHTML(msg.sender, msg.text, msg.timestamp);
-  });
-  
-  // Re-append the static thinking indicator to the end of the feed to keep DOM order
   chatMessagesFeed.appendChild(aiThinkingIndicator);
-  
-  // Smooth scroll to bottom
+  aiThinkingIndicator.classList.add("hidden");
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chats/${chatId}/messages`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const msgs = await res.json();
+      const chat = chats.find(c => c.id === chatId);
+      if (chat) chat.messages = msgs;
+      msgs.forEach(m => appendMessageHTML(m.sender, m.text, m.timestamp));
+    }
+  } catch (err) {
+    console.error("Failed to load messages:", err);
+  }
+
   chatMessagesFeed.scrollTop = chatMessagesFeed.scrollHeight;
-  
   switchView("chat");
 }
 
-// Helper to append message bubble to UI (Free document-text style, no bubbles)
+/**
+ * Escapes HTML characters to prevent XSS.
+ * 
+ * @param {string} text The raw text value.
+ * @returns {string} The escaped safe HTML string.
+ */
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Basic markdown parser for bold, headings, line breaks, lists, and tables.
+ * 
+ * @param {string} text The input markdown string.
+ * @returns {string} The parsed HTML output.
+ */
+function parseMarkdown(text) {
+  if (!text) return "";
+  
+  let tableHtml = "";
+  let cleanText = text;
+  
+  // Extract and preserve the safe backend-generated tax calculation table to avoid escaping its markup
+  if (text.includes('class="tax-table"')) {
+    const tableRegex = /(<div class="audit-log-box">[\s\S]*?<\/table>)/;
+    const match = text.match(tableRegex);
+    if (match) {
+      tableHtml = match[1];
+      cleanText = text.replace(tableRegex, "{{TAX_COMPUTATION_TABLE}}");
+    }
+  }
+  
+  // Escape the clean text to prevent XSS injections
+  let html = escapeHtml(cleanText);
+  
+  // Restore specific safe citation badges generated by the LLM
+  html = html.replace(/&lt;a\s+class=&quot;cit-badge&quot;\s+data-cit-idx=&quot;(\d+)&quot;&gt;(.*?)&lt;\/a&gt;/g, '<a class="cit-badge" data-cit-idx="$1">$2</a>');
+  html = html.replace(/&lt;a\s+class=&#039;cit-badge&#039;\s+data-cit-idx=&#039;(\d+)&#039;&gt;(.*?)&lt;\/a&gt;/g, '<a class="cit-badge" data-cit-idx="$1">$2</a>');
+  
+  // Apply standard markdown formatting
+  html = html.replace(/^(?:---|___|\*\*\*)\s*$/gm, '<hr class="md-hr">');
+  html = html.replace(/^### (.*?)$/gm, '<h3 class="md-h3">$1</h3>');
+  html = html.replace(/^#### (.*?)$/gm, '<h4 class="md-h4">$1</h4>');
+  html = html.replace(/^## (.*?)$/gm, '<h2 class="md-h2">$1</h2>');
+  html = html.replace(/^# (.*?)$/gm, '<h1 class="md-h1">$1</h1>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/^\*\s+(.*?)$/gm, '<li class="md-li">$1</li>');
+  html = html.replace(/^-\s+(.*?)$/gm, '<li class="md-li">$1</li>');
+  
+  html = html.replace(/((?:<li class="md-li">.*?<\/li>\s*)+)/g, '<ul class="md-ul">$1</ul>');
+  html = html.replace(/\n/g, '<br>');
+  
+  html = html.replace(/<ul class="md-ul"><br>/g, '<ul class="md-ul">');
+  html = html.replace(/<\/ul><br>/g, '</ul>');
+  html = html.replace(/<\/li><br>/g, '</li>');
+  html = html.replace(/<hr class="md-hr"><br>/g, '<hr class="md-hr">');
+  html = html.replace(/<\/h3><br>/g, '</h3>');
+  html = html.replace(/<\/h4><br>/g, '</h4>');
+  html = html.replace(/<\/h2><br>/g, '</h2>');
+  html = html.replace(/<\/h1><br>/g, '</h1>');
+  html = html.replace(/<\/table><br>/g, '</table>');
+  html = html.replace(/<\/div><br>/g, '</div>');
+  
+  // Re-inject the safe calculation table HTML
+  if (tableHtml) {
+    if (html.includes("{{TAX_COMPUTATION_TABLE}}")) {
+      html = html.replace("{{TAX_COMPUTATION_TABLE}}", tableHtml);
+    } else {
+      html = tableHtml + "<br>" + html;
+    }
+  }
+  
+  return html;
+}
+
+/**
+ * Creates and appends message bubbles inside chat feed feeds.
+ * 
+ * @param {string} sender The message origin indicator ('user', 'ai').
+ * @param {string} text The conversational text content.
+ * @param {string} timestamp The time label string.
+ */
 function appendMessageHTML(sender, text, timestamp) {
   const row = document.createElement("div");
   row.className = `message-row ${sender}`;
   
+  const contentHtml = sender === "ai" ? parseMarkdown(text) : escapeHtml(text);
+  
   row.innerHTML = `
     <div class="message-bubble">
-      <div class="message-text">${text}</div>
-      <div style="font-size: 9.5px; color: var(--text-muted); margin-top: 6px;">Sent at ${timestamp}</div>
-    </div>
-  `;
-  
-  // Insert before thinking indicator if it is in the DOM feed, else append at end
-  if (chatMessagesFeed.contains(aiThinkingIndicator) && !aiThinkingIndicator.classList.contains("hidden")) {
+      <div class="message-text">${contentHtml}</div>
+      <div style="font-size:9.5px;color:var(--text-muted);margin-top:6px;">${timestamp}</div>
+    </div>`;
+  if (chatMessagesFeed.contains(aiThinkingIndicator)) {
     chatMessagesFeed.insertBefore(row, aiThinkingIndicator);
   } else {
-    // If indicator is hidden, make sure we append before the hidden indicator element
-    chatMessagesFeed.insertBefore(row, aiThinkingIndicator);
+    chatMessagesFeed.appendChild(row);
   }
-  
-  // Attach tooltip hooks to citations if any
-  row.querySelectorAll(".cit-badge").forEach((badge) => {
-    badge.addEventListener("click", (e) => {
+  row.querySelectorAll(".cit-badge").forEach(badge => {
+    badge.addEventListener("click", e => {
       e.preventDefault();
       const idx = parseInt(badge.getAttribute("data-cit-idx"));
       const chat = chats.find(c => c.id === currentChatId);
       if (chat && chat.citations && chat.citations[idx]) {
-        alert(`Legal Reference details [${chat.citations[idx].section}]:\n\n"${chat.citations[idx].text}"`);
+        const c = chat.citations[idx];
+        const cleanHeader = getCleanCitationHeader(c.section || "FBR Reference Citation");
+        showCustomAlert("FBR Reference Citation", cleanHeader, c.section);
       }
     });
   });
 }
 
-// 12. Delete Chat Session
-function deleteChat(chatId) {
-  chats = chats.filter(c => c.id !== chatId);
-  localStorage.setItem("taxpilot_chats", JSON.stringify(chats));
-  
-  if (currentChatId === chatId) {
-    currentChatId = null;
-    switchView("chat");
+/**
+ * Triggers backend DELETE chat routing, splicing local cached elements.
+ * 
+ * @param {string} chatId The chat session thread ID.
+ */
+async function deleteChat(chatId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (res.ok) {
+      chats = chats.filter(c => c.id !== chatId);
+      if (currentChatId === chatId) { currentChatId = null; switchView("chat"); }
+      renderSidebar();
+      renderHistoryGrid();
+    }
+  } catch (err) {
+    console.error("Delete failed:", err);
   }
-  
-  renderSidebar();
-  renderHistoryGrid();
 }
 
-// 13. Create a Fresh New Chat
+/**
+ * Clears parameters, input cards, and sets layouts to launch a fresh discussion thread.
+ */
 function handleNewChat() {
   currentChatId = null;
   chatPanel.classList.add("welcome-state-active");
@@ -604,411 +934,290 @@ function handleNewChat() {
   chatMessagesFeed.innerHTML = "";
   chatTextarea.value = "";
   adjustTextareaHeight();
-  
-  // Set random sleek greeting variant
   applyRandomGreeting();
-  
-  // Make sure thinking indicator is appended back inside the cleared messages feed
   chatMessagesFeed.appendChild(aiThinkingIndicator);
   aiThinkingIndicator.classList.add("hidden");
-  
-  // Sync view status badges to active userProfile settings
   updateProfileUILabels();
-  
   switchView("chat");
   renderSidebar();
 }
 
-// 14. Send & Stream Message Logic (Simulated LangGraph pipeline)
-function handleSendMessage() {
+/**
+ * Manages conversation pipeline logic, updates chat state feeds, handles thinking logs and network results.
+ */
+async function handleSendMessage() {
   const text = chatTextarea.value.trim();
   if (!text) return;
-  
+
   chatTextarea.value = "";
   adjustTextareaHeight();
   sendMsgBtn.disabled = true;
-  
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString([], { month: 'short', day: '2-digit', year: 'numeric' }) + ", " + timeStr;
-  
-  let isFirstMessage = false;
-  
-  // Initialize chat if none active
+
+  const now     = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+  const dateStr = now.toLocaleDateString([], { month:"short", day:"2-digit", year:"numeric" }) + ", " + timeStr;
+
   if (!currentChatId) {
-    isFirstMessage = true;
-    const newId = "chat-" + Date.now();
-    const selectedYear = userProfile.taxYear;
-    const selectedAtl = userProfile.atlStatus;
-    
-    const newChatObj = {
-      id: newId,
-      topic: text.length > 40 ? text.substring(0, 40) + "..." : text,
-      taxYear: selectedYear,
-      atlStatus: selectedAtl,
-      createdDate: dateStr,
-      summary: "",
-      messages: [],
-      calculation: null,
-      citations: []
-    };
-    
-    chats.push(newChatObj);
+    const newId   = crypto.randomUUID();
+    const title   = text.length > 48 ? text.substring(0, 48) + "…" : text;
+
+    fetch(`${API_BASE_URL}/api/chats`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ user_id: session.user_id, thread_id: newId, title })
+    }).catch(err => {
+      console.error("Thread creation failed:", err);
+    });
+
     currentChatId = newId;
-    
-    // UI layout shifts (remove centered welcome alignments)
+    chats.unshift({
+      id: currentChatId, topic: title,
+      taxYear: session.taxYear, atlStatus: session.atlStatus,
+      createdDate: dateStr, summary: "", messages: [],
+      calculation: null, citations: []
+    });
+
     chatPanel.classList.remove("welcome-state-active");
     chatWelcomeState.classList.add("hidden");
     chatMessagesFeed.classList.remove("hidden");
-    
-    // Ensure the thinking indicator is in the feed DOM structure
-    chatMessagesFeed.appendChild(aiThinkingIndicator);
   }
-  
+
   const activeChat = chats.find(c => c.id === currentChatId);
-  activeChat.messages.push({ sender: "user", text: text, timestamp: timeStr });
-  
-  // Append user message to thread
+  activeChat.messages.push({ sender:"user", text, timestamp: timeStr });
   appendMessageHTML("user", text, timeStr);
-  
-  // Move thinking indicator to the absolute bottom of scrollable feed container
+
   chatMessagesFeed.appendChild(aiThinkingIndicator);
   aiThinkingIndicator.classList.remove("hidden");
-  
-  // Scroll list to reveal the inline processing indicator
+  thinkingStepText.textContent = "Analyzing your query...";
+  const steps = [
+    "Retrieving relevant tax information...",
+    "Computing calculation rules...",
+    "Generating final response..."
+  ];
+  let si = 0;
+  const cycleInterval = setInterval(() => {
+    if (si < steps.length) thinkingStepText.textContent = steps[si++];
+  }, 1400);
+
   chatMessagesFeed.scrollTop = chatMessagesFeed.scrollHeight;
   renderSidebar();
-  
-  // AI Progress pipeline simulator
-  runSimulatedPipeline(text, activeChat);
-}
 
-// Simulated execution of graph nodes
-function runSimulatedPipeline(promptText, chatObj) {
-  const steps = [
-    { text: "Planner Node: Analyzing query and loading slab configs from PostgreSQL...", delay: 800 },
-    { text: "Retrieval Node: Performing semantic retrieval over Qdrant Vector DB for Section 12 & Schedules...", delay: 1800 },
-    { text: "Calculator Node: Executing Python deterministic calculations for Salary Slabs...", delay: 2800 },
-    { text: "Answer Node: Assembling final verified citations and generated FBR legal references...", delay: 3800 }
-  ];
-  
-  steps.forEach(step => {
-    setTimeout(() => {
-      if (currentChatId === chatObj.id) {
-        thinkingStepText.textContent = step.text;
-      }
-    }, step.delay);
-  });
-  
-  // Complete response generations
-  setTimeout(() => {
-    if (currentChatId !== chatObj.id) return;
-    
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/chats/${currentChatId}/message`, {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body:    JSON.stringify({ message: text, user_id: session.user_id })
+    });
+
+    clearInterval(cycleInterval);
     aiThinkingIndicator.classList.add("hidden");
-    
-    // Parse salary values
-    const salaryMatch = promptText.replace(/,/g, '').match(/\b\d{5,8}\b/);
-    let salaryVal = null;
-    if (salaryMatch) {
-      salaryVal = parseInt(salaryMatch[0]);
-    }
-    
-    let aiResponseText = "";
-    let calcObj = null;
-    let citeList = [];
-    let summaryText = "";
-    
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    if (salaryVal) {
-      const gross = salaryVal;
-      const isFiler = chatObj.atlStatus === "Active";
-      let baseTax = 0;
-      let variableRate = 0;
-      let threshold = 0;
-      let slabName = "";
-      let rateDesc = "";
-      
-      if (gross <= 600000) {
-        slabName = "Slab 1 (Up to PKR 600,000)";
-        rateDesc = "Exempt (0% tax)";
-      } else if (gross <= 1200000) {
-        slabName = "Slab 2 (PKR 600,000 - 1,200,000)";
-        threshold = 600000;
-        variableRate = 0.025;
-        rateDesc = "2.5% of amount exceeding Rs. 600,000";
-      } else if (gross <= 2200000) {
-        slabName = "Slab 3 (PKR 1,200,000 - 2,200,000)";
-        baseTax = 15000;
-        threshold = 1200000;
-        variableRate = 0.125;
-        rateDesc = "Rs. 15,000 + 12.5% of amount exceeding Rs. 1,200,000";
-      } else if (gross <= 3200000) {
-        slabName = "Slab 4 (PKR 2,200,000 - 3,200,000)";
-        baseTax = 140000;
-        threshold = 2200000;
-        variableRate = 0.225;
-        rateDesc = "Rs. 140,000 + 22.5% of amount exceeding Rs. 2,200,000";
-      } else if (gross <= 4100000) {
-        slabName = "Slab 5 (PKR 3,200,000 - 4,100,000)";
-        baseTax = 365000;
-        threshold = 3200000;
-        variableRate = 0.275;
-        rateDesc = "Rs. 365,000 + 27.5% of amount exceeding Rs. 3,200,000";
-      } else {
-        slabName = "Slab 6 (Exceeding PKR 4,100,000)";
-        baseTax = 612500;
-        threshold = 4100000;
-        variableRate = 0.35;
-        rateDesc = "Rs. 612,500 + 35% of amount exceeding Rs. 4,100,000";
-      }
-      
-      const taxableExcess = Math.max(0, gross - threshold);
-      const varTax = taxableExcess * variableRate;
-      let totalTax = baseTax + varTax;
-      let finalTax = totalTax;
-      let nonFilerSurcharge = 0;
-      
-      if (!isFiler) {
-        nonFilerSurcharge = totalTax;
-        finalTax = totalTax * 2;
-      }
-      
-      const effectivePct = ((finalTax / gross) * 100).toFixed(1) + "%";
-      
-      calcObj = {
-        grossSalary: gross,
-        taxableSalary: gross,
-        taxOwed: finalTax,
-        rateText: isFiler ? rateDesc : `${rateDesc} (Doubled due to Non-ATL Status)`,
-        effectiveRate: effectivePct
-      };
-      
-      citeList = [
-        {
-          section: "First Schedule, Part I, Division I",
-          text: `Prescribes salary slabs for Tax Year ${chatObj.taxYear}. Minimum tax exemption is set at Rs 600,000.`
-        }
-      ];
-      
-      if (!isFiler) {
-        citeList.push({
-          section: "Tenth Schedule, Rule 1",
-          text: "Requires a 100% tax surcharge penalty multiplier for individuals who fail to register active on the Active Taxpayers List."
-        });
-      }
-      
-      citeList.push({
-        section: "Section 12 - Definition of Salary",
-        text: "Declares all income received by an employee under employment (wages, bonus, salary) as taxable."
-      });
-      
-      summaryText = `Calculated tax liability for a salaried individual earning PKR ${gross.toLocaleString()} for Tax Year ${chatObj.taxYear}. Filer status: ${chatObj.atlStatus}. Calculated tax is PKR ${finalTax.toLocaleString()}.`;
-      
-      aiResponseText = `Based on the deterministic calculation for <strong>Tax Year ${chatObj.taxYear}</strong>, here is the breakdown of your salary income tax liability.
 
-<div class="audit-log-box">
-[CALCULATOR NODE - AUDIT LOG]
-User Input Salary: PKR ${gross.toLocaleString()}
-Taxpayer Status: ${chatObj.atlStatus} ATL
-Slab Determined: ${slabName}
-Base Filer Tax: PKR ${baseTax.toLocaleString()}
-Exceeding Amount: PKR ${gross.toLocaleString()} - PKR ${threshold.toLocaleString()} = PKR ${taxableExcess.toLocaleString()}
-Variable Rate: ${(variableRate * 100).toFixed(1)}%
-Variable Tax: PKR ${varTax.toLocaleString()}
-Subtotal Base Tax: PKR ${totalTax.toLocaleString()}
-${!isFiler ? `Tenth Schedule Surcharge (Non-ATL): 100% Penalty Multiplier (PKR ${nonFilerSurcharge.toLocaleString()})` : 'No Non-ATL surcharge applied.'}
-Calculated Total Tax: PKR ${finalTax.toLocaleString()}
-</div>
+    if (res.ok) {
+      const data = await res.json();
 
-<h3>Tax Computation Summary</h3>
-<table class="tax-table">
-  <thead>
-    <tr>
-      <th>Description</th>
-      <th>Amount (PKR)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Gross Annual Salary</td>
-      <td><strong>${gross.toLocaleString()}</strong></td>
-    </tr>
-    <tr>
-      <td>ATL Status</td>
-      <td class="${isFiler ? 'text-success' : 'text-danger'} font-semibold">${chatObj.atlStatus} Filer</td>
-    </tr>
-    <tr>
-      <td>Taxable Income (Section 12)</td>
-      <td>${gross.toLocaleString()}</td>
-    </tr>
-    <tr>
-      <td>Applicable Slab (First Schedule)</td>
-      <td>${slabName}</td>
-    </tr>
-    <tr>
-      <td>Base Tax Formula</td>
-      <td>${rateDesc} <a class="cit-badge" data-cit-idx="0">1st Schedule</a></td>
-    </tr>
-    ${!isFiler ? `
-    <tr>
-      <td>Non-ATL Penalty Multiplier</td>
-      <td>+100% Surcharge <a class="cit-badge" data-cit-idx="1">10th Schedule</a></td>
-    </tr>` : ''}
-    <tr>
-      <td><strong>Total Tax Payable</strong></td>
-      <td><strong class="${isFiler ? 'text-success' : 'text-danger'}">${finalTax.toLocaleString()}</strong></td>
-    </tr>
-    <tr>
-      <td>Effective Tax Rate</td>
-      <td><strong>${effectivePct}</strong></td>
-    </tr>
-  </tbody>
-</table>
+      activeChat.summary = typeof data.response === "string"
+        ? data.response.substring(0, 180) + "…" : "";
+      activeChat.topic   = data.topic || activeChat.topic;
 
-This computation is based strictly on Division I, Part I of the First Schedule of the Income Tax Ordinance 2001. <a class="cit-badge" data-cit-idx="0">1st Schedule</a>
+      if (data.calculation) activeChat.calculation = data.calculation;
+      if (data.citations)   activeChat.citations   = data.citations;
 
-<div class="disclaimer-box">
-<strong>FBR Compliance Disclaimer:</strong> This is a simulation based on the approved specs for the current tax year. The results do not constitute professional tax advice. Please verify details before filing your return.
-</div>`;
-      
+      activeChat.messages.push({ sender:"ai", text: data.response, timestamp: timeStr });
+      appendMessageHTML("ai", data.response, timeStr);
     } else {
-      summaryText = `Addressed tax inquiry: "${promptText.substring(0, 40)}...". Explained Section 12 taxable components and ATL registration rules.`;
-      
-      citeList = [
-        {
-          section: "Section 12 (Salary Income)",
-          text: "Defines taxable salary components, including wages, allowances, pensions, perquisites, and benefits."
-        },
-        {
-          section: "Section 181A (Active Taxpayers List)",
-          text: "Defines the Active Taxpayers List (ATL) and authorizes benefits and filers benefits."
-        }
-      ];
-      
-      aiResponseText = `I see you are inquiring about salary income rules under Pakistan's tax laws. 
-
-Here are the key points regarding salary taxation as dictated by the <strong>Income Tax Ordinance 2001</strong>:
-<ul>
-  <li><strong>Taxable Salary (Section 12):</strong> Salary includes basic salary, wages, bonuses, gratuities, perquisites, and all allowances except those specifically exempted (e.g. medical allowance up to 10% of basic is exempt if medical treatment is not covered). <a class="cit-badge" data-cit-idx="0">Section 12</a></li>
-  <li><strong>Active Taxpayer List (ATL):</strong> Appearing on the ATL (being an active filer) is essential. If your name is not on the ATL, rates on salary are increased by 100% under the Tenth Schedule, and high withholding taxes are applied to bank withdrawals and car registrations. <a class="cit-badge" data-cit-idx="1">Section 181A</a></li>
-  <li><strong>Filing Threshold:</strong> A salaried individual with annual income exceeding PKR 600,000 is legally required to file an annual income tax return.</li>
-</ul>
-
-If you would like a tax liability calculation, please provide an annual or monthly income amount (e.g. "Calculate tax for 1.8M salary").
-
-<div class="disclaimer-box">
-<strong>Disclaimer:</strong> Tax laws are subject to modifications by annual Finance Acts. Verify with a certified Chartered Accountant or standard IRS portal.
-</div>`;
+      const err = await res.json().catch(() => ({}));
+      appendMessageHTML("ai",
+        `<span style="color:var(--danger-red)">⚠ Error from agent: ${err.detail || "Unknown error"}</span>`,
+        timeStr);
     }
-    
-    chatObj.summary = summaryText;
-    chatObj.calculation = calcObj;
-    chatObj.citations = citeList;
-    chatObj.messages.push({ sender: "ai", text: aiResponseText, timestamp: timeStr });
-    
-    localStorage.setItem("taxpilot_chats", JSON.stringify(chats));
-    
-    appendMessageHTML("ai", aiResponseText, timeStr);
-    chatMessagesFeed.scrollTop = chatMessagesFeed.scrollHeight;
-    
+  } catch (err) {
+    clearInterval(cycleInterval);
+    aiThinkingIndicator.classList.add("hidden");
+    if (err instanceof TypeError && err.message.toLowerCase().includes("fetch")) {
+      appendMessageHTML("ai",
+        "I could not reach the TaxPilot backend. Please make sure the server is running on port 8000.",
+        timeStr);
+    } else {
+      appendMessageHTML("ai",
+        "Something went wrong while processing your request. Please try again.",
+        timeStr);
+    }
+    console.error("Message send error:", err);
+  } finally {
+    sendMsgBtn.disabled = false;
     renderSidebar();
     renderHistoryGrid();
-  }, 4200);
+    chatMessagesFeed.scrollTop = chatMessagesFeed.scrollHeight;
+  }
 }
 
-// Auto-resizes the input text area
+/**
+ * Resizes the chat textarea input field automatically based on text volume.
+ */
 function adjustTextareaHeight() {
   chatTextarea.style.height = "auto";
-  chatTextarea.style.height = (chatTextarea.scrollHeight) + "px";
+  chatTextarea.style.height = chatTextarea.scrollHeight + "px";
   sendMsgBtn.disabled = chatTextarea.value.trim() === "";
 }
 
-// 15. Event Listeners Setup
+/**
+ * Maps handlers, keystrokes, modal buttons, and click listeners.
+ */
 function setupEventListeners() {
   themeBtn.addEventListener("click", toggleTheme);
   newChatBtn.addEventListener("click", handleNewChat);
-  
-  // History Button in Sidebar
   sidebarHistoryBtn.addEventListener("click", () => switchView("history"));
-  
-  // Profile settings trigger page view
   profileBtn.addEventListener("click", () => switchView("profile"));
-  
-  // Profile Form Submissions
   profileEditForm.addEventListener("submit", saveProfile);
-  
-  // Profile Form Cancel button
-  profileCancelBtn.addEventListener("click", () => {
-    switchView("chat");
-  });
-  
-  // Textarea input listeners
+  profileCancelBtn.addEventListener("click", () => switchView("chat"));
+
   chatTextarea.addEventListener("input", adjustTextareaHeight);
-  chatTextarea.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+  chatTextarea.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   });
-  
   sendMsgBtn.addEventListener("click", handleSendMessage);
-  
-  // Details screen navigation
-  detailsBackBtn.addEventListener("click", () => {
-    switchView("chat");
-  });
-  
+
+  detailsBackBtn.addEventListener("click", () => switchView(detailsReferrerView));
   resumeChatBtn.addEventListener("click", () => {
-    if (currentChatId) {
-      loadActiveChat(currentChatId);
-    }
+    if (currentChatId) loadActiveChat(currentChatId);
   });
-  
-  // Logout confirm events
-  logoutBtn.addEventListener("click", () => {
-    logoutModal.classList.remove("hidden");
-  });
-  
-  closeLogoutBtn.addEventListener("click", () => {
-    logoutModal.classList.add("hidden");
-  });
-  
-  cancelLogoutBtn.addEventListener("click", () => {
-    logoutModal.classList.add("hidden");
-  });
-  
+
+  logoutBtn.addEventListener("click",       () => logoutModal.classList.remove("hidden"));
+  closeLogoutBtn.addEventListener("click",  () => logoutModal.classList.add("hidden"));
+  cancelLogoutBtn.addEventListener("click", () => logoutModal.classList.add("hidden"));
+
   confirmLogoutBtn.addEventListener("click", () => {
     logoutModal.classList.add("hidden");
-    
-    chats = [...initialMockChats];
-    localStorage.removeItem("taxpilot_chats");
-    localStorage.removeItem("taxpilot_profile");
-    
-    userProfile = {
-      name: "Rana Adeel",
-      email: "adeel.rana@example.pk",
-      ntn: "4892301-4",
-      atlStatus: "Active",
-      taxYear: "2026",
-      jurisdiction: "RTO Lahore, Zone-I"
-    };
-    
-    currentChatId = null;
-    
-    alert("You have logged out. Resetting session to baseline demo mock data.");
-    
-    initApp();
-    switchView("chat");
+    sessionStorage.clear();
+    localStorage.removeItem("taxpilot_theme");
+    window.location.replace("login.html");
   });
-  
-  window.addEventListener("click", (e) => {
-    if (e.target === logoutModal) {
-      logoutModal.classList.add("hidden");
-    }
+
+  window.addEventListener("click", e => {
+    if (e.target === logoutModal) logoutModal.classList.add("hidden");
+    const customAlertModal = document.getElementById("custom-alert-modal");
+    if (e.target === customAlertModal) customAlertModal.classList.add("hidden");
   });
 }
 
-// Start Application on Load
-window.addEventListener("DOMContentLoaded", initApp);
+/**
+ * Translates structural file paths into clean, customer-facing titles.
+ * 
+ * @param {string} section The raw section path string.
+ * @returns {string} The cleaned customer-facing title.
+ */
+function getCleanCitationHeader(section) {
+  let text = section || "";
+  text = text.replace(/ActiveTaxpayerList\.md\s*-\s*/gi, "Active Taxpayer List - ");
+  text = text.replace(/RegisterForIncomeTax\.md\s*-\s*/gi, "Register for Income Tax - ");
+  text = text.replace(/FileIncomeTax\.md\s*-\s*/gi, "File Income Tax Return - ");
+  text = text.replace(/\.md/gi, "");
+  return text.trim();
+}
+
+/**
+ * Triggers modal alert blocks showing title, description, and source buttons.
+ * 
+ * @param {string} title Alert box title.
+ * @param {string} message Description/Content.
+ * @param {string|null} pdfSection The PDF citation target index.
+ */
+function showCustomAlert(title, message, pdfSection = null) {
+  const modal = document.getElementById("custom-alert-modal");
+  const titleEl = document.getElementById("custom-alert-title");
+  const msgEl = document.getElementById("custom-alert-message");
+  const pdfBtn = document.getElementById("custom-alert-pdf-btn");
+  
+  if (modal && titleEl && msgEl) {
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    
+    if (pdfSection) {
+      pdfBtn.style.display = "inline-flex";
+      
+      const isWeb = pdfSection.toLowerCase().includes(".md") || 
+                    pdfSection.toLowerCase().includes("active taxpayer") ||
+                    pdfSection.toLowerCase().includes("register") ||
+                    pdfSection.toLowerCase().includes("file");
+      
+      const btnSpan = pdfBtn.querySelector("span");
+      if (btnSpan) {
+        btnSpan.textContent = isWeb ? "View Website" : "View Source PDF";
+      }
+      
+      pdfBtn.onclick = (e) => {
+        e.preventDefault();
+        openCitationPdf(pdfSection);
+      };
+    } else {
+      pdfBtn.style.display = "none";
+    }
+    
+    modal.classList.remove("hidden");
+  }
+}
+
+/**
+ * Dismisses active popup modal layouts.
+ */
+function closeCustomAlert() {
+  const modal = document.getElementById("custom-alert-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
+
+/**
+ * Maps citation tags to appropriate cloud FBR guide PDFs or portals, matching exact sections.
+ * 
+ * @param {string} section The FBR reference citation section text.
+ */
+function openCitationPdf(section) {
+  const sectionText = section || "";
+  
+  if (sectionText.toLowerCase().includes("activetaxpayerlist") || 
+      sectionText.toLowerCase().includes("active taxpayer")) {
+    window.open("https://fbr.gov.pk/categ/active-taxpayer-list-income-tax/51147/30859/71168", "_blank");
+    return;
+  }
+  if (sectionText.toLowerCase().includes("registerforincometax") || 
+      sectionText.toLowerCase().includes("register for income")) {
+    window.open("https://www.fbr.gov.pk/categ/income-tax/51148/30846/%2061149", "_blank");
+    return;
+  }
+  if (sectionText.toLowerCase().includes("fileincometax") || 
+      sectionText.toLowerCase().includes("file income")) {
+    window.open("https://fbr.gov.pk/categ/file-income-tax-return/51147/80860/%2071158", "_blank");
+    return;
+  }
+
+  let pdfUrl = "https://hqxxyiobvjizfvhosjch.supabase.co/storage/v1/object/public/taxpilot-docs/IncomeTaxOrdinance2001-Amended-20.02.2026.pdf";
+  
+  if (sectionText.toLowerCase().includes("rules") || sectionText.toLowerCase().includes("rule")) {
+    pdfUrl = "https://hqxxyiobvjizfvhosjch.supabase.co/storage/v1/object/public/taxpilot-docs/IncomeTaxRules2002Amendedupto10.02.2017.pdf";
+  } else if (sectionText.toLowerCase().includes("finance act") || sectionText.toLowerCase().includes("finance")) {
+    pdfUrl = "https://hqxxyiobvjizfvhosjch.supabase.co/storage/v1/object/public/taxpilot-docs/FinanceAct2026.pdf";
+  }
+
+  let cleanSection = sectionText;
+  if (sectionText.includes(" - ")) {
+    cleanSection = sectionText.split(" - ").slice(1).join(" - ").trim();
+  }
+  cleanSection = cleanSection.replace(/\s*\(.*?\)\s*/g, " ").trim();
+
+  const searchPhrase = encodeURIComponent(cleanSection.replace(/[()]/g, "").trim());
+  const fullUrl = `${pdfUrl}#search=${searchPhrase}`;
+  
+  window.open(fullUrl, "_blank");
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  setupEventListeners();
+  initApp();
+});

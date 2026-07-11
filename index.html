@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaxPilot - Pakistan Tax Assistance AI</title>
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Auth Guard: redirect to login if no session -->
+  <script>
+    if (!sessionStorage.getItem("taxpilot_token")) {
+      window.location.replace("login.html");
+    }
+  </script>
   
   <!-- Typography (Standard clean Sans-Serif font) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,30 +128,22 @@
     <!-- Main Content Area -->
     <main class="main-content">
       
-      <!-- Top Navigation Header -->
-      <header class="top-nav">
-        <div class="nav-left">
-          <!-- Chat Console text removed, container kept empty for structural layouts -->
-          <span id="current-view-title" class="view-title"></span>
-        </div>
-        <div class="nav-right">
-          <!-- Metadata and status info display -->
-          <div class="top-nav-status">
-            <span class="badge badge-year" id="nav-year-val">TY 2026</span>
-            <span class="badge badge-atl" id="nav-atl-val">Active ATL</span>
-          </div>
-        </div>
-      </header>
+      <!-- Floating Top Status Panel -->
+      <div class="top-nav-status">
+        <span class="badge badge-year" id="nav-year-val">TY 2026</span>
+        <span class="badge badge-atl" id="nav-atl-val">Active ATL</span>
+      </div>
 
       <!-- View Wrapper -->
       <div class="view-viewport">
         
-        <!-- 1. Chat Console Panel (Glow background moved here to center around the chat box) -->
+        <!-- 1. Chat Console Panel (Hourglass background glow) -->
         <section id="chat-panel" class="view-panel active welcome-state-active">
           
-          <!-- Glowing background centered relative to the chat box container -->
+          <!-- Glowing background hourglass layout (top orange, bottom blue) -->
           <div class="glowing-background">
-            <div class="glow-orb-center"></div>
+            <div class="glow-orb-top"></div>
+            <div class="glow-orb-bottom"></div>
           </div>
           
           <!-- Large, clean greeting message for initial state (Suggestions and banners removed) -->
@@ -226,10 +226,6 @@
                       <span class="meta-label">Taxpayer Category</span>
                       <span class="meta-value" id="details-meta-category">Salaried Individual (Income Tax Ordinance)</span>
                     </div>
-                    <div class="meta-item">
-                      <span class="meta-label">Database Origin</span>
-                      <span class="meta-value">Qdrant Vector DB & PostgreSQL</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -298,12 +294,12 @@
                     <input type="text" id="profile-input-name" class="profile-input" required>
                   </div>
                   <div class="form-group">
-                    <label for="profile-input-email">Email Address</label>
-                    <input type="email" id="profile-input-email" class="profile-input" required>
+                    <label for="profile-input-email">Email Address (Read-only)</label>
+                    <input type="email" id="profile-input-email" class="profile-input" required disabled>
                   </div>
                   <div class="form-group">
-                    <label for="profile-input-ntn">NTN / Registration Number</label>
-                    <input type="text" id="profile-input-ntn" class="profile-input" required>
+                    <label for="profile-input-jurisdiction">Tax Jurisdiction</label>
+                    <input type="text" id="profile-input-jurisdiction" class="profile-input" required>
                   </div>
                   <div class="form-group">
                     <label for="profile-input-atl">Active Taxpayers List (ATL) Status</label>
@@ -320,9 +316,89 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label for="profile-input-jurisdiction">Tax Jurisdiction</label>
-                    <input type="text" id="profile-input-jurisdiction" class="profile-input" disabled value="RTO Lahore, Zone-I">
+                    <label for="profile-input-residency">Residency Status</label>
+                    <select id="profile-input-residency" class="profile-select">
+                      <option value="Resident">Resident</option>
+                      <option value="Non-Resident">Non-Resident</option>
+                    </select>
                   </div>
+                  <div class="form-group">
+                    <label for="profile-input-entity">Entity Type</label>
+                    <select id="profile-input-entity" class="profile-select">
+                      <option value="Individual">Individual</option>
+                      <option value="AOP">Association of Persons (AOP)</option>
+                      <option value="Company">Company</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-input-special">Special Status</label>
+                    <select id="profile-input-special" class="profile-select">
+                      <option value="None">None</option>
+                      <option value="Ex-Serviceman">Ex-Serviceman</option>
+                      <option value="Senior_Citizen">Senior Citizen</option>
+                      <option value="Disabled">Disabled Person</option>
+                      <option value="Dependent_of_Shaheed">Dependent of Shaheed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Income Declarations Section -->
+                <div class="form-section-header" style="margin-top: 24px; margin-bottom: 12px; font-weight: 600; font-size: 14px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+                  Annual Income Declarations (PKR)
+                </div>
+                
+                <div class="income-checkboxes-container" style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
+                  <!-- Salary stream -->
+                  <div class="income-checkbox-group">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="profile-chk-salary" onchange="toggleProfileIncomeWrapper('salary')" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                      <span>Salaried Income</span>
+                    </label>
+                    <div id="profile-wrapper-salary" class="income-input-wrapper" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <div class="form-group">
+                          <label for="profile-input-inc-salary">Gross Annual Salary</label>
+                          <input type="number" id="profile-input-inc-salary" class="profile-input" min="0">
+                        </div>
+                        <div class="form-group">
+                          <label for="profile-input-ded-salary">Salary Deductions</label>
+                          <input type="number" id="profile-input-ded-salary" class="profile-input" min="0">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Business stream -->
+                  <div class="income-checkbox-group">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="profile-chk-business" onchange="toggleProfileIncomeWrapper('business')" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                      <span>Business Income</span>
+                    </label>
+                    <div id="profile-wrapper-business" class="income-input-wrapper" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                      <div class="form-group">
+                        <label for="profile-input-inc-business">Gross Business Annual Income</label>
+                        <input type="number" id="profile-input-inc-business" class="profile-input" min="0">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Property stream -->
+                  <div class="income-checkbox-group">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="profile-chk-property" onchange="toggleProfileIncomeWrapper('property')" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                      <span>Property Rental Income</span>
+                    </label>
+                    <div id="profile-wrapper-property" class="income-input-wrapper" style="margin-left: 24px; margin-top: 10px; border-left: 2px solid var(--accent); padding-left: 12px; display: none;">
+                      <div class="form-group">
+                        <label for="profile-input-inc-property">Gross Property Annual Income</label>
+                        <input type="number" id="profile-input-inc-property" class="profile-input" min="0">
+                      </div>
+                    </div>
+                  </div>
+
+
+
+
                 </div>
                 
                 <div class="form-actions">
@@ -352,6 +428,30 @@
       <div class="modal-footer">
         <button id="cancel-logout-btn" class="btn btn-outline">Cancel</button>
         <button id="confirm-logout-btn" class="btn btn-danger">Yes, Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert Modal -->
+  <div id="custom-alert-modal" class="modal-overlay hidden">
+    <div class="modal-content card-glass" style="max-width: 550px;">
+      <div class="modal-header">
+        <h2 id="custom-alert-title">Notification</h2>
+        <button id="close-custom-alert-btn" class="modal-close-btn" onclick="closeCustomAlert()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="custom-alert-message" style="line-height: 1.6; font-size: 14.5px; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 20px;"></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button id="custom-alert-pdf-btn" class="btn btn-outline" style="display: none; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-small" style="width: 16px; height: 16px;">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          <span>View Source PDF</span>
+        </button>
+        <button class="btn btn-primary" onclick="closeCustomAlert()" style="min-width: 100px;">Close</button>
       </div>
     </div>
   </div>
