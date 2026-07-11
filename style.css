@@ -1566,7 +1566,7 @@ body.sidebar-open {
     cursor: pointer !important;
     line-height: 1 !important;
     padding: 4px !important;
-    margin-left: 12px !important;
+    margin-left: auto !important;
     transition: opacity 0.2s ease !important;
   }
 
@@ -1579,33 +1579,49 @@ body.sidebar-open {
     top: 0;
     left: 0 !important;
     transform: translateX(-100%) !important;
-    width: 260px !important;
-    height: 100dvh !important;
-    height: 100vh !important;
+    width: 270px !important;
+    height: 100% !important;
+    max-height: -webkit-fill-available !important;
     z-index: 999 !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3) !important;
     background-color: var(--sidebar-bg) !important;
     backdrop-filter: blur(12px) !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     display: flex !important;
     flex-direction: column !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 20px)) !important;
   }
 
   .sidebar.active {
     transform: translateX(0) !important;
   }
 
+  /* Let the chats list shrink so the footer is always reachable by scrolling */
   .sidebar-chats {
-    flex: none !important;
+    flex: 0 1 auto !important;
     overflow-y: visible !important;
+    min-height: 0 !important;
   }
 
+  /* Pin footer to the bottom of the sidebar's scrollable area */
   .sidebar-footer {
-    padding-bottom: 34px !important; /* Safety padding for bottom navigation bars */
     flex-shrink: 0 !important;
-    margin-top: 24px !important;
+    margin-top: auto !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Bottom safe-area padding for chat input bar */
+  .chat-input-wrapper {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)) !important;
+  }
+
+  /* Bottom safe-area padding for details and history scroll containers */
+  .details-view-container,
+  .history-view-container {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 20px)) !important;
   }
 
   .top-nav-status {
