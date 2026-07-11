@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#logoGrad)" stroke="#FF7A00" stroke-width="2" stroke-linejoin="round" />
+  <path d="M2 12L12 17L22 12" stroke="#FF7A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M2 17L12 22L22 17" stroke="#FF7A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <defs>
+    <linearGradient id="logoGrad" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7A00" />
+      <stop offset="1" stop-color="#FF3D00" />
+    </linearGradient>
+  </defs>
+</svg>

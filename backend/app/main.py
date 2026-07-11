@@ -395,6 +395,13 @@ import os
 
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    favicon_path = os.path.join(static_dir, "favicon.svg")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path, media_type="image/svg+xml")
+    return {"message": "Favicon not found"}
+
 @app.get("/")
 def read_root():
     home_path = os.path.join(static_dir, "home.html")
