@@ -1580,6 +1580,7 @@ body.sidebar-open {
     left: 0 !important;
     transform: translateX(-100%) !important;
     width: 260px !important;
+    height: 100dvh !important;
     height: 100vh !important;
     z-index: 999 !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -1594,6 +1595,17 @@ body.sidebar-open {
 
   .sidebar.active {
     transform: translateX(0) !important;
+  }
+
+  .sidebar-chats {
+    flex: none !important;
+    overflow-y: visible !important;
+  }
+
+  .sidebar-footer {
+    padding-bottom: 34px !important; /* Safety padding for bottom navigation bars */
+    flex-shrink: 0 !important;
+    margin-top: 24px !important;
   }
 
   .top-nav-status {
