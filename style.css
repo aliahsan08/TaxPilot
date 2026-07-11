@@ -216,6 +216,7 @@ textarea {
   z-index: 1;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
 }
 
 /* Sidebar Styling */
@@ -1273,6 +1274,9 @@ body.light-mode .cit-badge {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg);
   padding: 24px;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .form-grid {
@@ -1312,6 +1316,10 @@ body.light-mode .cit-badge {
   outline: none;
   font-size: 13px;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .profile-input:focus,
@@ -1578,10 +1586,10 @@ body.sidebar-open {
     position: fixed !important;
     top: 0;
     left: 0 !important;
+    bottom: 0 !important;
     transform: translateX(-100%) !important;
     width: 270px !important;
-    height: 100% !important;
-    max-height: -webkit-fill-available !important;
+    height: auto !important;
     z-index: 999 !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3) !important;
@@ -1592,7 +1600,7 @@ body.sidebar-open {
     -webkit-overflow-scrolling: touch !important;
     display: flex !important;
     flex-direction: column !important;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom, 20px)) !important;
+    padding-bottom: 0 !important;
   }
 
   .sidebar.active {
@@ -1606,22 +1614,55 @@ body.sidebar-open {
     min-height: 0 !important;
   }
 
-  /* Pin footer to the bottom of the sidebar's scrollable area */
+  /* Pin footer to the bottom of the sidebar */
   .sidebar-footer {
     flex-shrink: 0 !important;
     margin-top: auto !important;
-    padding-bottom: 0 !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* Bottom safe-area padding for chat input bar */
   .chat-input-wrapper {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)) !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  /* Bottom safe-area padding for details and history scroll containers */
+  /* Bottom safe-area padding for details, history, and profile scroll containers */
   .details-view-container,
-  .history-view-container {
-    padding-bottom: calc(24px + env(safe-area-inset-bottom, 20px)) !important;
+  .history-view-container,
+  .profile-view-container {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Profile form card must not overflow on mobile */
+  .profile-card-form {
+    padding: 16px !important;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-group {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Profile page must not overflow horizontally */
+  .profile-view-container {
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Income stream inline grids must go single-column */
+  .income-input-wrapper > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  .income-input-wrapper {
+    margin-left: 12px !important;
+    padding-left: 8px !important;
   }
 
   .top-nav-status {
