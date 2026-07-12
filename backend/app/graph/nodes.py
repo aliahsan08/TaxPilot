@@ -385,6 +385,34 @@ def eligibility_engine_node(state: AgentState) -> Dict[str, Any]:
         "next_node": "response_generator"
     }
 
+def clean_source_name(source: str) -> str:
+    """
+    Cleans raw document source names to clean display titles.
+    """
+    if not source:
+        return "FBR Document"
+    # Remove file extension if present
+    name = source
+    if name.lower().endswith(".pdf"):
+        name = name[:-4]
+        
+    name_lower = name.lower()
+    if "rules2002" in name_lower or "rules_2002" in name_lower or "rules 2002" in name_lower:
+        return "INCOME TAX RULES, 2002"
+    elif "rules" in name_lower and "2002" in name_lower:
+        return "INCOME TAX RULES, 2002"
+    elif "ordinance2001" in name_lower or "ordinance_2001" in name_lower or "ordinance 2001" in name_lower:
+        return "INCOME TAX ORDINANCE, 2001"
+    elif "ordinance" in name_lower and "2001" in name_lower:
+        return "INCOME TAX ORDINANCE, 2001"
+    elif "finance" in name_lower and "2026" in name_lower:
+        return "FINANCE ACT, 2026"
+    elif "finance" in name_lower:
+        return "FINANCE ACT"
+    
+    # Generic replacements or fallbacks
+    return name.replace("_", " ").replace("-", " ").strip().upper()
+
 def response_generator_node(state: AgentState) -> Dict[str, Any]:
     """
     Synthesizes model responses, dynamic tables, and references into a final conversational message.
@@ -425,10 +453,9 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
     system_prompt = (
         "You are 'TaxPilot', a premium AI assistant for Pakistani FBR income tax compliance.\n"
         "CRITICAL RULES:\n"
-        "- Never introduce yourself or say 'Welcome to TaxPilot' or greet the taxpayer.\n"
-        "- Do NOT use greeting preamble or conversational boilerplate.\n"
-        "- Start answering the user's question directly, precisely, and concisely.\n"
-        "- Explain guidelines in plain English.\n\n"
+        "- Never introduce yourself, greet the taxpayer, or use conversational preambles/boilerplate.\n"
+        "- Answer the user's question directly, precisely, and with high conciseness.\n"
+        "- Explain complex tax rules in clean, plain English.\n\n"
     )
     
     user_context = f"Taxpayer Profile: Tax Year 2026, Residency: {profile.get('residency')}, Entity: {profile.get('entity')}, ATL status: {'Filer' if profile.get('is_atl_active') else 'Non-Filer'}.\n"
@@ -506,20 +533,23 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
         context_str = ""
         citations = []
         for i, doc in enumerate(retrieved):
-            context_str += f"[Chunk {i+1}]: Source: {doc['source']} > Section: {doc['section']}\nContent: {doc['content']}\n\n"
+            clean_src = clean_source_name(doc['source'])
+            context_str += f"[Chunk {i+1}]: Source: {clean_src} > Section: {doc['section']}\nContent: {doc['content']}\n\n"
             citations.append({
-                "section": f"{doc['source']} - {doc['section']}",
+                "section": f"{clean_src} - {doc['section']}",
                 "text": doc['content']
             })
             
         prompt = (
-            f"Answer the user query: \"{last_query}\"\n"
+            f"Answer the user query: \"{last_query}\"\n\n"
             f"Context from FBR Documents:\n{context_str}\n"
-            "Formulate a complete, direct, and concise response. You may use markdown bullet points or ordered lists. "
-            "At the end of key statements that rely on the FBR documents, append clickable citation badges using the format "
-            "'<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' where X is the 0-indexed reference index matching "
-            "the retrieved document list index.\n"
-            "Start answering the question directly. Do NOT introduce yourself, greet the user, or say 'Welcome to TaxPilot'."
+            "CRITICAL INSTRUCTIONS FOR RESPONSE:\n"
+            "1. Answer the query directly and concisely. Do NOT include any greeting, preamble, introductory boilerplate, or concluding conversational text. Start with the direct answer.\n"
+            "2. Keep the answer extremely precise, concise, and structured. Use short bullet points for steps or lists.\n"
+            "3. For every key fact, step, or rule stated from the FBR Documents, you MUST append a clickable citation badge using the EXACT HTML format: "
+            "'<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' where X is the 0-indexed document chunk number and 'Section Label' is the specific rule/section (e.g., 'Rule 44' or 'Section 114').\n"
+            "4. NEVER output markdown-style links like [Rule 44](...) or footnote links for citations. ONLY use the HTML '<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' format.\n"
+            "5. If a fact cannot be supported by the provided context, state that clearly and briefly."
         )
         
     try:
