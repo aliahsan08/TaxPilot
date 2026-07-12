@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 import bcrypt
 import time
@@ -225,6 +226,35 @@ def create_chat_thread(payload: ChatCreate, current_user: Dict[str, Any] = Depen
         "created_at": thread.created_at
     }
 
+def clean_summary_text(raw_text: str) -> str:
+    """Cleans HTML, Markdown tables, audit logs, and formatting out of thread summaries."""
+    if not raw_text:
+        return ""
+    
+    text = raw_text
+    # 1. Remove audit log (including case where it is HTML-stripped or raw)
+    text = re.sub(r'\[CALCULATOR NODE - AUDIT LOG\].*?(?:Calculated Total Tax:[^\n]*|$)', '', text, flags=re.DOTALL)
+    
+    # 2. Remove markdown tables (lines containing '|' with separators)
+    text = re.sub(r'###\s+Tax\s+Computation\s+Summary.*?(?:\n\n|\Z)', '', text, flags=re.DOTALL)
+    text = re.sub(r'\|.*?\|', '', text)
+    
+    # 3. Strip HTML tags (like <div class="..."> or <a href="...">)
+    text = re.sub(r'<[^>]*>', ' ', text)
+    
+    # 4. Strip Markdown headers, lists, bold/italic, code blocks
+    text = re.sub(r'#+\s+', '', text)
+    text = re.sub(r'\*\*|\*', '', text)
+    text = re.sub(r'`', '', text)
+    text = re.sub(r'[-*+]\s+', '', text)
+    text = re.sub(r'\d+\.\s+', '', text)
+    
+    # 5. Normalize whitespace and newlines
+    text = re.sub(r'\s+', ' ', text)
+    
+    clean_text = text.strip()
+    return clean_text[:180] + "..." if len(clean_text) > 180 else clean_text
+
 @app.get("/api/chats/user/{user_id}")
 def get_user_chats(user_id: str, current_user: Dict[str, Any] = Depends(get_supabase_user), db: Session = Depends(get_db)):
     """
@@ -251,7 +281,7 @@ def get_user_chats(user_id: str, current_user: Dict[str, Any] = Depends(get_supa
             messages = state.values.get("messages", [])
             for msg in messages:
                 if isinstance(msg, AIMessage):
-                    summary = msg.content[:180] + "..." if len(msg.content) > 180 else msg.content
+                    summary = clean_summary_text(msg.content)
                     break
         except Exception as e:
             logger.error(f"Error retrieving summary for thread {t.thread_id}: {e}")

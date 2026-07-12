@@ -467,10 +467,11 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
     
     system_prompt = (
         "You are a strict tax compliance assistant named TaxPilot.\n"
-        "If a user asks a query completely unrelated to finance, tax, or FBR compliance (e.g., recipes, mechanical repairs), instantly output the standard refusal message: 'I am TaxPilot, an assistant specialized only in Pakistani FBR tax compliance, calculations, and filing eligibility. I cannot assist with out-of-scope requests.' Do not reason through out-of-scope requests or explain why you cannot answer.\n"
+        "If a query is completely unrelated to finance, tax, or FBR compliance (e.g., recipes, mechanical repairs), instantly output the standard refusal message: 'I am TaxPilot, an assistant specialized only in Pakistani FBR tax compliance, calculations, and filing eligibility. I cannot assist with out-of-scope requests.' Do not reason through out-of-scope requests or explain why you cannot answer.\n"
         "CRITICAL RULES:\n"
+        "- Never refer to the person asking the question as 'the user'. Address them directly using second-person pronouns ('you', 'your') or refer to them professionally as 'the taxpayer'.\n"
         "- Never introduce yourself, greet the taxpayer, or use conversational preambles/boilerplate.\n"
-        "- Answer the user's question directly, precisely, and with high conciseness.\n"
+        "- Answer the query directly, precisely, and with high conciseness.\n"
         "- Explain complex tax rules in clean, plain English.\n\n"
     )
     
@@ -478,7 +479,6 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
     
     if intent == "calculator" and calc_results:
         gross = calc_results.get("gross_salary", 0.0)
-        deductions = calc_results.get("admissible_deductions", 0.0)
         business = calc_results.get("business_income", 0.0)
         property_val = calc_results.get("rental_income", 0.0)
         tax = calc_results.get("total_tax_owed", 0.0)
@@ -498,78 +498,55 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             f"Calculated Total Tax: PKR {tax:,.2f}"
         )
         
-        audit_log_html = audit_log.replace('\n', '<br>')
-        
-        rows = []
-        if gross > 0:
-            rows.append(f'<tr><td>Gross Annual Salary</td><td>{gross:,.2f}</td></tr>')
-        if business > 0:
-            rows.append(f'<tr><td>Business/Non-Salaried Income</td><td>{business:,.2f}</td></tr>')
-        if property_val > 0:
-            rows.append(f'<tr><td>Gross Property Rental Income</td><td>{property_val:,.2f}</td></tr>')
-            rows.append(f'<tr><td>Property Repairs Deduction (20%)</td><td>-{(property_val * 0.2):,.2f}</td></tr>')
-        if deductions > 0:
-            rows.append(f'<tr><td>Admissible Deductions (Zakat/etc.)</td><td>-{deductions:,.2f}</td></tr>')
-            
-        rows.append(f'<tr style="border-top: 2px solid var(--border-color);"><td><strong>Total Taxable NTR Income</strong></td><td><strong>{calc_results.get("taxable_income", 0):,.2f}</strong></td></tr>')
-        rows.append(f'<tr><td>Applicable Slab (First Schedule)</td><td>{slab}</td></tr>')
-        rows.append(f'<tr><td>Tax Slab Slabs Formula</td><td>{rate_desc} <a class="cit-badge" data-cit-idx="0">1st Schedule</a></td></tr>')
-        rows.append(f'<tr class="text-success font-semibold"><td><strong>Total Tax Payable</strong></td><td><strong>{tax:,.2f}</strong></td></tr>')
-        rows.append(f'<tr><td>Effective Tax Rate</td><td>{effective}</td></tr>')
-        
-        rows_html = "".join(rows)
-        table_html = (
-            f'<div class="audit-log-box">{audit_log_html}</div>'
-            f'<h3>Tax Computation Summary</h3>'
-            f'<table class="tax-table">'
-            f'<thead><tr><th>Description</th><th>Amount (PKR)</th></tr></thead>'
-            f'<tbody>{rows_html}</tbody></table>'
-        )
-        
         prompt = (
-            f"Provide a clear, detailed, and comprehensive explanation of this tax calculation for the taxpayer:\n"
+            f"You are TaxPilot. When generating a tax calculation, you MUST output the response in this exact order and format. Do not deviate.\n\n"
             f"Taxpayer Profile: Tax Year 2026, Residency: {profile.get('residency')}, Entity: {profile.get('entity')}, ATL status: {'Filer' if profile.get('is_atl_active') else 'Non-Filer'}.\n"
             f"Tax calculation details:\n"
             f"- Gross Salary: PKR {gross:,.2f}\n"
             f"- Business/Non-Salaried Income: PKR {business:,.2f}\n"
             f"- Rental Property Income: PKR {property_val:,.2f}\n"
-            f"- Taxable Income: PKR {calc_results.get('taxable_income', 0):,.2f}\n"
-            f"- Determined Slab: {slab}\n"
+            f"- Total Taxable NTR Income: PKR {calc_results.get('taxable_income', 0):,.2f}\n"
+            f"- Applicable Slab (First Schedule): {slab}\n"
+            f"- Tax Slab Formula: {rate_desc}\n"
             f"- Base Tax: PKR {calc_results.get('base_tax', 0):,.2f}\n"
             f"- Variable Tax: PKR {calc_results.get('variable_tax', 0):,.2f}\n"
             f"- Total Tax Payable: PKR {tax:,.2f}\n"
             f"- Effective Tax Rate: {effective}\n\n"
-            "INSTRUCTIONS:\n"
-            "1. Explain step-by-step how the tax is calculated using progressive slabs under the First Schedule of the Income Tax Ordinance. Mention how the salary/business income falls into the determined slab and how base tax and variable rate are applied.\n"
-            "2. Reference the taxpayer's filer status (Active ATL) and explain how being a filer impacts their tax liability or rates compared to non-filers.\n"
-            "3. Insert the exact placeholder '{{TAX_COMPUTATION_TABLE}}' at the beginning or within your explanation where the summary table should be rendered. Do NOT generate the HTML table or list the raw keys yourself; only output the placeholder.\n"
-            "4. Append the HTML citation badge '<a class=\"cit-badge\" data-cit-idx=\"0\">1st Schedule</a>' when referring to the First Schedule or slab rates.\n"
-            "5. Conclude your response with the standard disclaimer:\n"
-            "'FBR Compliance Disclaimer: This is a simulation based on the approved specs for the current tax year. The results do not constitute professional tax advice.'\n"
-            "6. Make the response detailed, professional, and well-structured, but directly get to the point without greeting preambles.\n"
-            "7. CRITICAL FORMATTING RULES: 1. Do not output raw HTML tags like <div>, <h3>, or <table>. 2. Use standard Markdown for headings (###) and standard Markdown tables for all data summaries (excluding the {{TAX_COMPUTATION_TABLE}} placeholder itself). 3. Do not append system metadata, times, or system statuses to the end of the generated text."
+            "**Step 1: Introduction**\n"
+            "Start with a brief, plain-text summary explaining that the income is taxed according to FBR slabs without additional multipliers.\n\n"
+            "**Step 2: Audit Log**\n"
+            "Output the exact text provided below, wrapped inside a standard Markdown code block (```):\n"
+            f"{audit_log}\n\n"
+            "**Step 3: Summary Table**\n"
+            "Output a standard Markdown table titled '### Tax Computation Summary'. It must have exactly two columns: 'Description' and 'Amount (PKR)'. Include rows mapping to the income sources, Total Taxable NTR Income, Applicable Slab (First Schedule), Tax Slab Formula, Total Tax Payable, and Effective Tax Rate.\n\n"
+            "**Step 4: Breakdown**\n"
+            "After the table, provide a brief step-by-step breakdown using standard text. DO NOT use LaTeX formatting for simple arithmetic. Trust the numbers in the calculation details completely. Do not hallucinate tax rates (e.g., if the variable tax is a certain amount, use it exactly as provided to explain the rate, do not change the percentage).\n\n"
+            "**Step 5: Disclaimer**\n"
+            "Conclude your response with the standard disclaimer:\n"
+            "'FBR Compliance Disclaimer: This is a simulation based on the approved specs for the current tax year. The results do not constitute professional tax advice.'\n\n"
+            "CRITICAL FORMATTING RULES: 1. Do not output raw HTML tags like <div>, <h3>, or <table>. 2. Use standard Markdown for headings (###) and standard Markdown tables. 3. Do not append system metadata, times, or system statuses to the end of the generated text."
         )
     elif intent == "eligibility" and elig_results:
         required_text = "REQUIRED to file a return" if elig_results.get("is_required") else "NOT required to file a return"
         reasons_text = "\n".join([f"- {r}" for r in elig_results.get("reasons", [])]) or "- Income does not exceed registration thresholds."
         
         prompt = (
-            f"Explain clearly and in detail whether the user is required to register or file an income tax return based on these checks:\n"
+            f"Explain clearly and in detail whether the taxpayer is required to register or file an income tax return based on these checks:\n"
             f"Filing Requirement: {required_text}\n"
             f"Statutory Reasons:\n{reasons_text}\n\n"
             "INSTRUCTIONS:\n"
-            "1. Provide a detailed explanation of the user's filing requirements under Section 114 of the Income Tax Ordinance, 2001.\n"
-            "2. Explain the statutory filing threshold (e.g., PKR 600,000 for salaried individuals, PKR 400,000 for non-salaried) and how the user's income compares to this threshold.\n"
-            "3. Explain the next steps the user should take (e.g., registering on the FBR Iris portal and submitting the return).\n"
+            "1. Provide a detailed explanation of the filing requirements under Section 114 of the Income Tax Ordinance, 2001.\n"
+            "2. Explain the statutory filing threshold (e.g., PKR 600,000 for salaried individuals, PKR 400,000 for non-salaried) and how the taxpayer's income compares to this threshold.\n"
+            "3. Explain the next steps the taxpayer should take (e.g., registering on the FBR Iris portal and submitting the return).\n"
             "4. Append the HTML citation badge '<a class=\"cit-badge\" data-cit-idx=\"0\">Section 114</a>' next to mentions of Section 114 or filing requirements.\n"
-            "5. Keep the response professional, detailed, and directly address the user without greeting preambles.\n"
+            "5. Keep the response professional, detailed, and directly address the taxpayer (e.g., 'you', 'your') without greeting preambles. Never refer to the person as 'the user'.\n"
             "6. Format your response using clear Markdown headers (###) and bullet points. Ensure all cross-referenced sections (e.g., **Section 114**) are highlighted in bold syntax."
         )
     elif intent == "generic":
         prompt = (
-            f"Respond politely and professionally to the user's message: \"{last_query}\"\n"
-            "Keep the response direct, concise, and helpful. Do NOT use greetings, welcome boilerplate, or conversational preambles. Focus on guiding the user on how TaxPilot can assist them with FBR income tax compliance, slab calculations, or filing eligibility check tasks.\n"
-            "If the user message is completely unrelated to finance, tax, or FBR compliance (e.g., recipes, mechanical repairs), instantly output the standard refusal message: 'I am TaxPilot, an assistant specialized only in Pakistani FBR tax compliance, calculations, and filing eligibility. I cannot assist with out-of-scope requests.' Do not reason through out-of-scope requests or explain why you cannot answer."
+            f"Respond politely and professionally to the query: \"{last_query}\"\n"
+            "Keep the response direct, concise, and helpful. Do NOT use greetings, welcome boilerplate, or conversational preambles. Focus on guiding the taxpayer on how TaxPilot can assist them with FBR income tax compliance, slab calculations, or filing eligibility check tasks.\n"
+            "If the query is completely unrelated to finance, tax, or FBR compliance (e.g., recipes, mechanical repairs), instantly output the standard refusal message: 'I am TaxPilot, an assistant specialized only in Pakistani FBR tax compliance, calculations, and filing eligibility. I cannot assist with out-of-scope requests.' Do not reason through out-of-scope requests or explain why you cannot answer."
         )
     else:
         context_str = ""
@@ -583,7 +560,7 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             })
             
         prompt = (
-            f"Answer the user query: \"{last_query}\"\n\n"
+            f"Answer the query: \"{last_query}\"\n\n"
             f"Context from FBR Documents:\n{context_str}\n"
             "CRITICAL INSTRUCTIONS FOR RESPONSE:\n"
             "1. Answer the query directly, professionally, and in detail. Do NOT include any greeting, preamble, introductory boilerplate, or concluding conversational text. Start with the direct answer.\n"
@@ -592,7 +569,7 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             "'<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' where X is the 0-indexed document chunk number and 'Section Label' is the specific rule/section (e.g., 'Rule 44' or 'Section 114').\n"
             "4. NEVER output markdown-style links like [Rule 44](...) or footnote links for citations. ONLY use the HTML '<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' format.\n"
             "5. If a fact cannot be supported by the provided context, state that clearly and briefly.\n"
-            "6. If the provided reference chunks do not contain explicit step-by-step instructions for a task, state clearly what is available in the text first, and then direct the user to official FBR resources. Do not speculate, invent placeholder steps, or complain about missing context."
+            "6. Do not include notes, disclaimers, or meta-commentary about the provided context (e.g., 'The provided context lacks explicit instructions'). If information is missing, seamlessly direct the taxpayer to official FBR resources or the Iris Portal as a natural next step."
         )
         
     try:
@@ -604,12 +581,6 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
         
         response = safe_llm_invoke(messages_to_send)
         raw_content = extract_text_content(response.content)
-        
-        if intent == "calculator" and calc_results:
-            if "{{TAX_COMPUTATION_TABLE}}" in raw_content:
-                raw_content = raw_content.replace("{{TAX_COMPUTATION_TABLE}}", table_html)
-            else:
-                raw_content = table_html + "\n\n" + raw_content
                 
         final_citations = state.get("citations", []) if (intent in ["calculator", "eligibility"]) else citations
         return {
