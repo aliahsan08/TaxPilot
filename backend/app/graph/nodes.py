@@ -450,6 +450,8 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
     elig_results = state.get("eligibility_results", {})
     retrieved = state.get("retrieved_documents", [])
     
+    citations = []
+    
     system_prompt = (
         "You are 'TaxPilot', a premium AI assistant for Pakistani FBR income tax compliance.\n"
         "CRITICAL RULES:\n"
@@ -511,23 +513,46 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
         )
         
         prompt = (
-            f"Explain this tax calculation to the user. Reference FBR slabs and the filer/non-filer multiplier if applicable.\n"
-            "Insert the placeholder {{TAX_COMPUTATION_TABLE}} where the computation summary table should go. "
-            "Do NOT output the HTML table yourself, only output the placeholder {{TAX_COMPUTATION_TABLE}}.\n"
-            "Conclude with the standard disclaimer:\n"
+            f"Provide a clear, detailed, and comprehensive explanation of this tax calculation for the taxpayer:\n"
+            f"Taxpayer Profile: Tax Year 2026, Residency: {profile.get('residency')}, Entity: {profile.get('entity')}, ATL status: {'Filer' if profile.get('is_atl_active') else 'Non-Filer'}.\n"
+            f"Tax calculation details:\n"
+            f"- Gross Salary: PKR {gross:,.2f}\n"
+            f"- Business/Non-Salaried Income: PKR {business:,.2f}\n"
+            f"- Rental Property Income: PKR {property_val:,.2f}\n"
+            f"- Taxable Income: PKR {calc_results.get('taxable_income', 0):,.2f}\n"
+            f"- Determined Slab: {slab}\n"
+            f"- Base Tax: PKR {calc_results.get('base_tax', 0):,.2f}\n"
+            f"- Variable Tax: PKR {calc_results.get('variable_tax', 0):,.2f}\n"
+            f"- Total Tax Payable: PKR {tax:,.2f}\n"
+            f"- Effective Tax Rate: {effective}\n\n"
+            "INSTRUCTIONS:\n"
+            "1. Explain step-by-step how the tax is calculated using progressive slabs under the First Schedule of the Income Tax Ordinance. Mention how the salary/business income falls into the determined slab and how base tax and variable rate are applied.\n"
+            "2. Reference the taxpayer's filer status (Active ATL) and explain how being a filer impacts their tax liability or rates compared to non-filers.\n"
+            "3. Insert the exact placeholder '{{TAX_COMPUTATION_TABLE}}' at the beginning or within your explanation where the summary table should be rendered. Do NOT generate the HTML table or list the raw keys yourself; only output the placeholder.\n"
+            "4. Append the HTML citation badge '<a class=\"cit-badge\" data-cit-idx=\"0\">1st Schedule</a>' when referring to the First Schedule or slab rates.\n"
+            "5. Conclude your response with the standard disclaimer:\n"
             "'FBR Compliance Disclaimer: This is a simulation based on the approved specs for the current tax year. The results do not constitute professional tax advice.'\n"
-            "Keep the explanation concise, professional, and direct. Avoid repeating profile stats or saying welcome."
+            "6. Make the response detailed, professional, and well-structured, but directly get to the point without greeting preambles."
         )
     elif intent == "eligibility" and elig_results:
         required_text = "REQUIRED to file a return" if elig_results.get("is_required") else "NOT required to file a return"
         reasons_text = "\n".join([f"- {r}" for r in elig_results.get("reasons", [])]) or "- Income does not exceed registration thresholds."
         
         prompt = (
-            f"Explain to the user whether they are required to register or file an income tax return based on these checks:\n"
+            f"Explain clearly and in detail whether the user is required to register or file an income tax return based on these checks:\n"
             f"Filing Requirement: {required_text}\n"
             f"Statutory Reasons:\n{reasons_text}\n\n"
-            "Explain this clearly, highlighting Section 114 filing thresholds.\n"
-            "Answer directly and concisely without introductions or greeting boilerplate."
+            "INSTRUCTIONS:\n"
+            "1. Provide a detailed explanation of the user's filing requirements under Section 114 of the Income Tax Ordinance, 2001.\n"
+            "2. Explain the statutory filing threshold (e.g., PKR 600,000 for salaried individuals, PKR 400,000 for non-salaried) and how the user's income compares to this threshold.\n"
+            "3. Explain the next steps the user should take (e.g., registering on the FBR Iris portal and submitting the return).\n"
+            "4. Append the HTML citation badge '<a class=\"cit-badge\" data-cit-idx=\"0\">Section 114</a>' next to mentions of Section 114 or filing requirements.\n"
+            "5. Keep the response professional, detailed, and directly address the user without greeting preambles."
+        )
+    elif intent == "generic":
+        prompt = (
+            f"Respond politely and professionally to the user's message: \"{last_query}\"\n"
+            "Keep the response direct, concise, and helpful. Do NOT use greetings, welcome boilerplate, or conversational preambles. Focus on guiding the user on how TaxPilot can assist them with FBR income tax compliance, slab calculations, or filing eligibility check tasks."
         )
     else:
         context_str = ""
@@ -544,8 +569,8 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             f"Answer the user query: \"{last_query}\"\n\n"
             f"Context from FBR Documents:\n{context_str}\n"
             "CRITICAL INSTRUCTIONS FOR RESPONSE:\n"
-            "1. Answer the query directly and concisely. Do NOT include any greeting, preamble, introductory boilerplate, or concluding conversational text. Start with the direct answer.\n"
-            "2. Keep the answer extremely precise, concise, and structured. Use short bullet points for steps or lists.\n"
+            "1. Answer the query directly, professionally, and in detail. Do NOT include any greeting, preamble, introductory boilerplate, or concluding conversational text. Start with the direct answer.\n"
+            "2. Provide complete and comprehensive information with clear explanations of steps or rules. Use structured bullet points or ordered lists, ensuring each point contains at least one or two descriptive sentences with necessary context and details.\n"
             "3. For every key fact, step, or rule stated from the FBR Documents, you MUST append a clickable citation badge using the EXACT HTML format: "
             "'<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' where X is the 0-indexed document chunk number and 'Section Label' is the specific rule/section (e.g., 'Rule 44' or 'Section 114').\n"
             "4. NEVER output markdown-style links like [Rule 44](...) or footnote links for citations. ONLY use the HTML '<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' format.\n"
