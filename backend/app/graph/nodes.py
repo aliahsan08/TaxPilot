@@ -52,6 +52,17 @@ def safe_llm_invoke(messages: list) -> Any:
                 raise e3
 
 
+def clean_llm_response(raw_text: str) -> str:
+    """Strips Chain-of-Thought reasoning and trailing metadata from LLM outputs."""
+    # 1. Remove the entire <think>...</think> block (including newlines)
+    clean_text = re.sub(r'<think>.*?</think>', '', raw_text, flags=re.DOTALL)
+    
+    # 2. Clean up any trailing timestamps or system leakage (e.g., "10:33 PM" or "05:21 PM")
+    clean_text = re.sub(r'\b\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?\b', '', clean_text)
+    
+    # 3. Strip leading/trailing whitespace left over from deletions
+    return clean_text.strip()
+
 def extract_text_content(content: Any) -> str:
     """
     Extracts plain text content from LangChain message response objects.
@@ -63,7 +74,7 @@ def extract_text_content(content: Any) -> str:
         The extracted string content.
     """
     if isinstance(content, str):
-        return content
+        text = content
     elif isinstance(content, list):
         texts = []
         for part in content:
@@ -71,8 +82,10 @@ def extract_text_content(content: Any) -> str:
                 texts.append(part["text"])
             elif isinstance(part, str):
                 texts.append(part)
-        return "".join(texts)
-    return str(content)
+        text = "".join(texts)
+    else:
+        text = str(content)
+    return clean_llm_response(text)
 
 def load_state_node(state: AgentState) -> Dict[str, Any]:
     """
@@ -453,7 +466,8 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
     citations = []
     
     system_prompt = (
-        "You are 'TaxPilot', a premium AI assistant for Pakistani FBR income tax compliance.\n"
+        "You are a strict tax compliance assistant named TaxPilot.\n"
+        "If a user asks a query completely unrelated to finance, tax, or FBR compliance (e.g., recipes, mechanical repairs), instantly output the standard refusal message: 'I am TaxPilot, an assistant specialized only in Pakistani FBR tax compliance, calculations, and filing eligibility. I cannot assist with out-of-scope requests.' Do not reason through out-of-scope requests or explain why you cannot answer.\n"
         "CRITICAL RULES:\n"
         "- Never introduce yourself, greet the taxpayer, or use conversational preambles/boilerplate.\n"
         "- Answer the user's question directly, precisely, and with high conciseness.\n"
@@ -532,7 +546,8 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             "4. Append the HTML citation badge '<a class=\"cit-badge\" data-cit-idx=\"0\">1st Schedule</a>' when referring to the First Schedule or slab rates.\n"
             "5. Conclude your response with the standard disclaimer:\n"
             "'FBR Compliance Disclaimer: This is a simulation based on the approved specs for the current tax year. The results do not constitute professional tax advice.'\n"
-            "6. Make the response detailed, professional, and well-structured, but directly get to the point without greeting preambles."
+            "6. Make the response detailed, professional, and well-structured, but directly get to the point without greeting preambles.\n"
+            "7. CRITICAL FORMATTING RULES: 1. Do not output raw HTML tags like <div>, <h3>, or <table>. 2. Use standard Markdown for headings (###) and standard Markdown tables for all data summaries (excluding the {{TAX_COMPUTATION_TABLE}} placeholder itself). 3. Do not append system metadata, times, or system statuses to the end of the generated text."
         )
     elif intent == "eligibility" and elig_results:
         required_text = "REQUIRED to file a return" if elig_results.get("is_required") else "NOT required to file a return"
@@ -547,12 +562,14 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             "2. Explain the statutory filing threshold (e.g., PKR 600,000 for salaried individuals, PKR 400,000 for non-salaried) and how the user's income compares to this threshold.\n"
             "3. Explain the next steps the user should take (e.g., registering on the FBR Iris portal and submitting the return).\n"
             "4. Append the HTML citation badge '<a class=\"cit-badge\" data-cit-idx=\"0\">Section 114</a>' next to mentions of Section 114 or filing requirements.\n"
-            "5. Keep the response professional, detailed, and directly address the user without greeting preambles."
+            "5. Keep the response professional, detailed, and directly address the user without greeting preambles.\n"
+            "6. Format your response using clear Markdown headers (###) and bullet points. Ensure all cross-referenced sections (e.g., **Section 114**) are highlighted in bold syntax."
         )
     elif intent == "generic":
         prompt = (
             f"Respond politely and professionally to the user's message: \"{last_query}\"\n"
-            "Keep the response direct, concise, and helpful. Do NOT use greetings, welcome boilerplate, or conversational preambles. Focus on guiding the user on how TaxPilot can assist them with FBR income tax compliance, slab calculations, or filing eligibility check tasks."
+            "Keep the response direct, concise, and helpful. Do NOT use greetings, welcome boilerplate, or conversational preambles. Focus on guiding the user on how TaxPilot can assist them with FBR income tax compliance, slab calculations, or filing eligibility check tasks.\n"
+            "If the user message is completely unrelated to finance, tax, or FBR compliance (e.g., recipes, mechanical repairs), instantly output the standard refusal message: 'I am TaxPilot, an assistant specialized only in Pakistani FBR tax compliance, calculations, and filing eligibility. I cannot assist with out-of-scope requests.' Do not reason through out-of-scope requests or explain why you cannot answer."
         )
     else:
         context_str = ""
@@ -574,7 +591,8 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
             "3. For every key fact, step, or rule stated from the FBR Documents, you MUST append a clickable citation badge using the EXACT HTML format: "
             "'<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' where X is the 0-indexed document chunk number and 'Section Label' is the specific rule/section (e.g., 'Rule 44' or 'Section 114').\n"
             "4. NEVER output markdown-style links like [Rule 44](...) or footnote links for citations. ONLY use the HTML '<a class=\"cit-badge\" data-cit-idx=\"X\">Section Label</a>' format.\n"
-            "5. If a fact cannot be supported by the provided context, state that clearly and briefly."
+            "5. If a fact cannot be supported by the provided context, state that clearly and briefly.\n"
+            "6. If the provided reference chunks do not contain explicit step-by-step instructions for a task, state clearly what is available in the text first, and then direct the user to official FBR resources. Do not speculate, invent placeholder steps, or complain about missing context."
         )
         
     try:
