@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = Field(..., description="Qdrant connection host")
     QDRANT_PORT: int = 6333
     QDRANT_API_KEY: str = Field("", description="Qdrant auth key if hosted on Cloud")
-    QDRANT_COLLECTION: str = "taxpilot_docs"
+    QDRANT_COLLECTION: str = "tax_pilot_docs"
 
     # LLM Settings
     LLM_API_KEY: str = Field(..., description="LLM API Key (e.g. Groq)")

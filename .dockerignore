@@ -6,3 +6,5 @@ __pycache__/
 *.pyd
 .venv/
 .pytest_cache/
+backend/evaluation_report.md
+backend/run_evaluation.py

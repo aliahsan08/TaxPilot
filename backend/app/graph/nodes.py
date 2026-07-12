@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from typing import Dict, Any, List
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
@@ -14,11 +14,43 @@ from app.graph.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-llm = ChatGroq(
+# Main LLM: Llama 3.3 70B
+main_llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=settings.LLM_API_KEY,
     temperature=0.2
 )
+
+# Primary Fallback LLM: Qwen3 32B
+primary_fallback_llm = ChatGroq(
+    model="qwen/qwen3-32b",
+    api_key=settings.LLM_API_KEY,
+    temperature=0.2
+)
+
+# Secondary Fallback LLM: Llama 4 Scout 17B
+secondary_fallback_llm = ChatGroq(
+    model="meta-llama/llama-4-scout-17b-16e-instruct",
+    api_key=settings.LLM_API_KEY,
+    temperature=0.2
+)
+
+def safe_llm_invoke(messages: list) -> Any:
+    try:
+        logger.info("Attempting to query main model llama-3.3-70b-versatile...")
+        return main_llm.invoke(messages)
+    except Exception as e:
+        logger.warning(f"Main model query failed: {e}. Trying primary fallback qwen/qwen3-32b...")
+        try:
+            return primary_fallback_llm.invoke(messages)
+        except Exception as e2:
+            logger.warning(f"Primary fallback query failed: {e2}. Trying secondary fallback meta-llama/llama-4-scout-17b-16e-instruct...")
+            try:
+                return secondary_fallback_llm.invoke(messages)
+            except Exception as e3:
+                logger.error(f"All models failed. Main: {e}, Primary Fallback: {e2}, Secondary Fallback: {e3}")
+                raise e3
+
 
 def extract_text_content(content: Any) -> str:
     """
@@ -161,10 +193,15 @@ def intent_classifier_node(state: AgentState) -> Dict[str, Any]:
     intent = "generic"
     overrides = {}
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = safe_llm_invoke([HumanMessage(content=prompt)])
         raw_content = extract_text_content(response.content)
-        clean_json = re.sub(r"^```json\s*|\s*```$", "", raw_content.strip(), flags=re.IGNORECASE)
-        data = json.loads(clean_json)
+        # Extract JSON substring between first { and last }
+        match = re.search(r"(\{.*\})", raw_content, re.DOTALL)
+        if match:
+            clean_json = match.group(1)
+        else:
+            clean_json = raw_content
+        data = json.loads(clean_json.strip())
         
         intent = data.get("intent", "generic").strip().lower()
         if intent not in ["calculator", "qa", "eligibility", "generic"]:
@@ -372,6 +409,14 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
 
     history = state.get("messages", [])[:-1]
     last_query = state.get("messages", [])[-1].content if state.get("messages") else ""
+    
+    # Filter message history to only include HumanMessage and AIMessage, and keep the last 3 text pairs (6 messages)
+    chat_history = [
+        msg for msg in history 
+        if isinstance(msg, (HumanMessage, AIMessage))
+    ]
+    context_history = chat_history[-6:]
+    
     profile = state.get("tax_profile", {})
     calc_results = state.get("calculation_results", {})
     elig_results = state.get("eligibility_results", {})
@@ -478,9 +523,13 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
         )
         
     try:
-        response = llm.invoke([
-            HumanMessage(content=system_prompt + user_context + prompt)
-        ])
+        messages_to_send = [
+            SystemMessage(content=system_prompt + user_context)
+        ] + list(context_history) + [
+            HumanMessage(content=prompt)
+        ]
+        
+        response = safe_llm_invoke(messages_to_send)
         raw_content = extract_text_content(response.content)
         
         if intent == "calculator" and calc_results:
