@@ -51,6 +51,7 @@ if (!session) throw new Error("No session — redirecting.");
 
 let chats        = [];
 let currentChatId = null;
+let isLoadingChat = false;
 let currentView  = "chat";
 let detailsReferrerView = "chat";
 let theme        = localStorage.getItem("taxpilot_theme") || "dark";
@@ -787,6 +788,10 @@ function openChatDetails(chatId) {
  * @param {string} chatId The chat session thread ID.
  */
 async function loadActiveChat(chatId) {
+  if (isLoadingChat) return;
+  isLoadingChat = true;
+  resumeChatBtn.disabled = true;
+
   currentChatId = chatId;
   chatPanel.classList.remove("welcome-state-active");
   chatWelcomeState.classList.add("hidden");
@@ -807,6 +812,9 @@ async function loadActiveChat(chatId) {
     }
   } catch (err) {
     console.error("Failed to load messages:", err);
+  } finally {
+    isLoadingChat = false;
+    resumeChatBtn.disabled = false;
   }
 
   chatMessagesFeed.scrollTop = chatMessagesFeed.scrollHeight;
@@ -857,6 +865,63 @@ function parseMarkdown(text) {
   html = html.replace(/&lt;a\s+class=&quot;cit-badge&quot;\s+data-cit-idx=&quot;(\d+)&quot;&gt;(.*?)&lt;\/a&gt;/g, '<a class="cit-badge" data-cit-idx="$1">$2</a>');
   html = html.replace(/&lt;a\s+class=&#039;cit-badge&#039;\s+data-cit-idx=&#039;(\d+)&#039;&gt;(.*?)&lt;\/a&gt;/g, '<a class="cit-badge" data-cit-idx="$1">$2</a>');
   
+  // Parse code blocks wrapped in ``` into <div class="audit-log-box">
+  html = html.replace(/```([\s\S]*?)```/g, (match, p1) => {
+    const formatted = p1.trim().replace(/\r?\n/g, "<br>");
+    return `<div class="audit-log-box">${formatted}</div>`;
+  });
+  
+  // Parse Markdown tables (lines starting and ending with | or containing it)
+  const tableRegex = /((?:^\|[^\n]*\|\r?\n?)+)/gm;
+  html = html.replace(tableRegex, (match) => {
+    const lines = match.trim().split("\n");
+    if (lines.length < 2) return match;
+    
+    let htmlTable = '<table class="tax-table">';
+    let hasHeader = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (/^[|:\-\s]+$/.test(line)) {
+        continue;
+      }
+      
+      const cols = line.split("|").map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+      if (cols.length === 0) continue;
+      
+      if (!hasHeader && i === 0) {
+        htmlTable += "<thead><tr>";
+        cols.forEach(col => {
+          htmlTable += `<th>${col}</th>`;
+        });
+        htmlTable += "</tr></thead><tbody>";
+        hasHeader = true;
+      } else {
+        let rowStyle = "";
+        const isBoldRow = cols[0].toLowerCase().includes("total") || cols[0].toLowerCase().includes("tax payable");
+        const isSuccessRow = cols[0].toLowerCase().includes("total tax payable");
+        
+        if (isSuccessRow) {
+          rowStyle = ' class="text-success font-semibold"';
+        } else if (isBoldRow) {
+          rowStyle = ' style="border-top: 2px solid var(--border-color);"';
+        }
+        
+        htmlTable += `<tr${rowStyle}>`;
+        cols.forEach((col, colIdx) => {
+          let cellContent = col;
+          if (isBoldRow) {
+            cellContent = `<strong>${col}</strong>`;
+          }
+          htmlTable += `<td>${cellContent}</td>`;
+        });
+        htmlTable += "</tr>";
+      }
+    }
+    htmlTable += "</tbody></table>";
+    return htmlTable;
+  });
+
   // Apply standard markdown formatting
   html = html.replace(/^(?:---|___|\*\*\*)\s*$/gm, '<hr class="md-hr">');
   html = html.replace(/^### (.*?)$/gm, '<h3 class="md-h3">$1</h3>');
@@ -1050,8 +1115,25 @@ async function handleSendMessage() {
     if (res.ok) {
       const data = await res.json();
 
+      function cleanSummaryTextForClient(rawText) {
+        if (!rawText) return "";
+        let text = rawText;
+        text = text.replace(/\[CALCULATOR NODE - AUDIT LOG\][\s\S]*?(?:Calculated Total Tax:[^\n]*|$)/, '');
+        text = text.replace(/###\s+Tax\s+Computation\s+Summary[\s\S]*?(?:\n\n|\Z)/, '');
+        text = text.replace(/\|.*?\|/g, '');
+        text = text.replace(/<[^>]*>/g, ' ');
+        text = text.replace(/#+\s/g, '');
+        text = text.replace(/\*\*|\*/g, '');
+        text = text.replace(/`/g, '');
+        text = text.replace(/[-*+]\s+/g, '');
+        text = text.replace(/\d+\.\s+/g, '');
+        text = text.replace(/\s+/g, ' ');
+        const clean = text.trim();
+        return clean.substring(0, 180) + (clean.length > 180 ? "…" : "");
+      }
+
       activeChat.summary = typeof data.response === "string"
-        ? data.response.substring(0, 180) + "…" : "";
+        ? cleanSummaryTextForClient(data.response) : "";
       activeChat.topic   = data.topic || activeChat.topic;
 
       if (data.calculation) activeChat.calculation = data.calculation;
